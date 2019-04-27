@@ -1,0 +1,40 @@
+{
+  "name": "tarteel-voice",
+  "version": "0.1.0",
+  "description": "A voice recognition microservice from Tarteel",
+  "main": "build/bundle.js",
+  "scripts": {
+    "build": "webpack",
+    "start": "node build/bundle.js",
+    "dev": "npm-run-all --parallel watch:server watch:build",
+    "watch:build": "webpack --watch",
+    "watch:server": "nodemon --inspect=\"9229\" \"./build/bundle.js\" --watch \"./build\" ",
+    "credentials": "$env:GOOGLE_APPLICATION_CREDENTIALS=\"C:/Users/bahaa/Downloads/Tarteel-43af8c924069.json\" ",
+    "deploy": "now & now alias"
+  },
+  "author": "Tarteel dev team",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-stage-0": "^6.24.1",
+    "nodemon": "^1.12.1",
+    "npm-run-all": "^4.1.5",
+    "regenerator-runtime": "^0.12.1",
+    "webpack": "4.16.1",
+    "webpack-cli": "^3.3.0",
+    "webpack-node-externals": "^1.7.2"
+  },
+  "dependencies": {
+    "@google-cloud/speech": "^2.3.0",
+    "aws-sdk": "^2.429.0",
+    "dotenv": "^7.0.0",
+    "express": "^4.16.4",
+    "humps": "^2.0.1",
+    "node-fetch": "^2.3.0",
+    "socket.io": "^2.2.0",
+    "uuid": "^3.3.2",
+    "wav": "^1.0.2"
+  }
+}

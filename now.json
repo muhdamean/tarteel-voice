@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "alias": ["tarteel-voice"],
+  "env": {
+    "IQRA_API_KEY": "@iqra_api_key",
+    "AWS_ACCESS_KEY_ID": "@aws_access_key_id",
+    "AWS_SECRET_ACCESS_KEY": "@aws_secret_access_key"
+  }
+}

@@ -1,0 +1,7 @@
+# now.sh ignores .gitignore only when this file exists
+
+node_modules/
+.history/
+.idea/
+build/
+.env*
