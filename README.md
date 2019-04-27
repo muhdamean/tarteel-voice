@@ -1,9 +1,7 @@
 # Tarteel-voice
 
 
-## Quick Overview
-
-This is a simple node.js micro service serves Tarteel's voice recognition and follow along features.
+The node.js micro service for Tarteel's voice recognition and follow along features.
 
 
 ## Usage
