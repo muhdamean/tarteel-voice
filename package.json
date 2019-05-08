@@ -8,7 +8,7 @@
     "start": "node build/bundle.js",
     "dev": "npm-run-all --parallel watch:server watch:build",
     "watch:build": "webpack --watch",
-    "watch:server": "nodemon --inspect=\"9229\" \"./build/bundle.js\" --watch \"./build\" ",
+    "watch:server": "nodemon --inspect=\"9230\" \"./build/bundle.js\" --watch \"./build\" ",
     "credentials": "$env:GOOGLE_APPLICATION_CREDENTIALS=\"C:/Users/bahaa/Downloads/Tarteel-43af8c924069.json\" ",
     "deploy": "now & now alias"
   },

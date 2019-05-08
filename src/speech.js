@@ -15,7 +15,7 @@ let speechClient,
   globalOptions;
 
 speechClient = new speech.SpeechClient({
-  keyFilename: './config/tarteel-236900-2486c1058706.json',
+  keyFilename: './Tarteel-b9ba24204548.json',
 }); // Creates a client.
 
 export const startStream = (socket, options) => {
@@ -71,7 +71,7 @@ export const startStream = (socket, options) => {
       });
     }
   });
-}
+};
 
 const handleData = (data, socket) => {  
   if (data.results[0]) {
@@ -92,7 +92,7 @@ const handleData = (data, socket) => {
       if (globalOptions.type === 'recognition') {
         handleSearch(finalString, socket);
       } else {
-        socket.emit('nextAyah')
+        socket.emit('nextAyah');
         startStream(socket, globalOptions);
       }
     } else {
@@ -108,7 +108,7 @@ const handleData = (data, socket) => {
 
   }
   
-}
+};
 
 /**
 * Closes the recognize stream and wipes it
@@ -119,7 +119,7 @@ export const endStream = () => {
     recognizeStream = null;
     outputFile.end();
   }
-}
+};
 
 /**
 * Receives streaming data and writes it to the recognizeStream for transcription
@@ -131,12 +131,12 @@ export const handleReceivedData = (data) => {
     recognizeStream.write(data);
     outputFile.write(data);
   }
-}
+};
 
 export const handleSearch = (query, socket) => {
   console.log('Query is: ', query);
   endStream();
-  socket.emit('loading', true)
+  socket.emit('loading', true);
   query = query.trim();
   fetch('https://api.iqraapp.com/api/v3.0/search', {
     method: 'POST',

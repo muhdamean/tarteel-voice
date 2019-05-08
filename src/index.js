@@ -5,7 +5,7 @@ import express from 'express';
 import { startStream, endStream, handleReceivedData } from './speech';
 import { setCurrentAyah } from './transcribe';
 
-require('dotenv').config()
+require('dotenv').config();
 
 const app = express();
 
@@ -15,7 +15,7 @@ const io = SocketIo(server);
 
 app.get('/', (req, res) => {
   res.send('Hello world!');
-})
+});
 
 io.on('connection', (socket) => {
   console.log('Connected: ', socket.id);
