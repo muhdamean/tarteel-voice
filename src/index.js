@@ -3,6 +3,7 @@ import http from 'http';
 import express from 'express';
 
 import { startStream, endStream, handleReceivedData } from './speech';
+import { startFileSave, endFileSave, handleDataFileSave } from './file';
 import { setCurrentAyah } from './transcribe';
 
 require('dotenv').config()
@@ -22,16 +23,19 @@ io.on('connection', (socket) => {
   
   socket.on("binaryAudioData", (chunk) => {
     handleReceivedData(chunk);
+    handleDataFileSave(chunk);
   });
 
   socket.on('endStream', () => {
     console.log('Ended!');
     endStream();
+    endFileSave();
   });
 
   socket.on('startStream', (options) => {
     console.log('Starting...');
     startStream(socket, options);
+    startFileSave(socket);
   });
 
   socket.on('setCurrentAyah', (ayah) => {

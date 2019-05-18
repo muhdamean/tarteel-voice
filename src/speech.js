@@ -1,6 +1,5 @@
 import speech from '@google-cloud/speech';
 import fetch from 'node-fetch';
-import wav from 'wav'
 import uuidv1 from 'uuid/v1';
 
 import upload from './aws/upload';
@@ -11,7 +10,6 @@ let speechClient,
   recognizeStream,
   partialQuery = '',
   interimTranscript = '',
-  outputFile,
   globalOptions;
 
 speechClient = new speech.SpeechClient({
@@ -19,11 +17,6 @@ speechClient = new speech.SpeechClient({
 }); // Creates a client.
 
 export const startStream = (socket, options) => {
-  outputFile = new wav.Writer({
-    channels: 1,
-    sampleRate: 48000,
-    bitDepth: 16
-  });
   const request = {
     config: {
       encoding: 'LINEAR16',
@@ -52,26 +45,7 @@ export const startStream = (socket, options) => {
     socket.emit('endStream');
   })
   .on('data', (data) => handleData(data, socket));
-
-
-  // registering upload event 
-  socket.on('upload', (data) => {
-    const id = uuidv1();
-    if (!recognizeStream) {
-      upload(outputFile, id).then((link) => {
-        saveItem({
-          id,
-          audioLink: link,
-          ...data,
-        }).then((record) => {
-          console.log(record);
-        }).catch(e => {
-          console.log('error: ', e);
-        })
-      });
-    }
-  });
-}
+};
 
 const handleData = (data, socket) => {  
   if (data.results[0]) {
@@ -117,7 +91,6 @@ export const endStream = () => {
   if (recognizeStream) {
     recognizeStream.end();
     recognizeStream = null;
-    outputFile.end();
   }
 }
 
@@ -129,7 +102,6 @@ export const endStream = () => {
 export const handleReceivedData = (data) => {
   if (recognizeStream) {
     recognizeStream.write(data);
-    outputFile.write(data);
   }
 }
 
