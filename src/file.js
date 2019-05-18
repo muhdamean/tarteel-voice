@@ -1,4 +1,8 @@
 import wav from 'wav';
+import upload from './aws/upload';
+import uuidv1 from 'uuid/v1';
+
+import { saveItem } from './aws/db';
 
 let outputFile;
 
