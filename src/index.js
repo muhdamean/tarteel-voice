@@ -4,8 +4,8 @@ import express from 'express';
 import fetch from 'node-fetch';
 
 import { RecognitionClient } from './speech';
-import { startFileSave, endFileSave, handleDataFileSave } from './file';
-import { findDiff, setCurrentAyah } from './transcribe';
+import { FileSaver } from './file';
+import { Transcriber } from './transcribe';
 
 require('dotenv').config()
 
@@ -19,21 +19,18 @@ app.get('/', (req, res) => {
   res.send('Hello world!');
 })
 
-let interimTranscript = '';
-
 io.on('connection', (socket) => {
   console.log('Connected: ', socket.id);
   socket.recognitionClient = null;
+  socket.fileSaver = null;
+  socket.transcriber = null;
 
   socket.onPartialResults = (data) => {
     if (data.results[0]) {
       socket.emit('speechData', data);
-      // TODO: Should reset transcript somewhere...
-      interimTranscript += data.results[0].alternatives[0].transcript;
       if (socket.globalOptions.type === 'transcribe') {
         if (Math.round(data.results[0].stability)) {
-          // console.log(data.results[0].alternatives[0].transcript);
-          findDiff(socket, data.results[0].alternatives[0].transcript);
+          socket.transcriber.findDiff(data.results[0].alternatives[0].transcript);
         }
       }
     }
@@ -89,26 +86,36 @@ io.on('connection', (socket) => {
 
   socket.on("binaryAudioData", (chunk) => {
     socket.recognitionClient.handleReceivedData(chunk)
-    handleDataFileSave(chunk);
+    socket.fileSaver.handleDataFileSave(chunk);
   });
 
   socket.on('endStream', () => {
     console.log('Ended!');
     socket.recognitionClient.endStream();
-    endFileSave();
+    socket.fileSaver.endFileSave();
   });
 
   socket.on('startStream', (options) => {
     console.log('Starting...');
     socket.globalOptions = options;
+
+    // Start recognition client
     socket.recognitionClient = new RecognitionClient(socket.onPartialResults, socket.onFinalResults, (err) => {console.log(err)})
     socket.recognitionClient.startStream()
 
-    startFileSave(socket);
+    // Start file saver
+    socket.fileSaver = new FileSaver()
+    socket.fileSaver.startFileSave();
+    socket.on('upload', socket.fileSaver.uploadData);
+
+    // Start transcriber if requested
+    if (socket.globalOptions.type === 'transcribe') {
+      socket.transcriber = new Transcriber((data) => socket.emit('handleMatchingResult', data))
+    }
   });
 
   socket.on('setCurrentAyah', (ayah) => {
-    setCurrentAyah(ayah)
+    socket.transcriber.setCurrentAyah(ayah)
   });
 
 });

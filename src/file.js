@@ -4,39 +4,41 @@ import uuidv1 from 'uuid/v1';
 
 import { saveItem } from './aws/db';
 
-let outputFile;
-
-export const startFileSave = (socket) => {
-  outputFile = new wav.Writer({
-    channels: 1,
-    sampleRate: 48000,
-    bitDepth: 16
-  });
-  // registering upload event 
-  socket.on('upload', (data) => {
-    const id = uuidv1();
-    if (!recognizeStream) {
-      upload(outputFile, id).then((link) => {
-        saveItem({
-          id,
-          audioLink: link,
-          ...data,
-        }).then((record) => {
-          console.log(record);
-        }).catch(e => {
-          console.log('error: ', e);
-        })
-      });
-    }
-  });
-}
-
-export const handleDataFileSave = (data) => {
-  if (outputFile) {
-    outputFile.write(data);
+export class FileSaver {
+  constructor() {
+    this.outputFile = null;
   }
-}
 
-export const endFileSave = () => {
-  outputFile.end();
+  startFileSave = () => {
+    this.outputFile = new wav.Writer({
+      channels: 1,
+      sampleRate: 48000,
+      bitDepth: 16
+    });
+  }
+
+  uploadData = (data) => {
+    const id = uuidv1();
+    upload(this.outputFile, id).then((link) => {
+      saveItem({
+        id,
+        audioLink: link,
+        ...data,
+      }).then((record) => {
+        console.log(record);
+      }).catch(e => {
+        console.log('error: ', e);
+      })
+    });
+  }
+
+  handleDataFileSave = (data) => {
+    if (this.outputFile) {
+      this.outputFile.write(data);
+    }
+  }
+
+  endFileSave = () => {
+    this.outputFile.end();
+  }
 }

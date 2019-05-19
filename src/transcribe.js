@@ -1,29 +1,34 @@
-let currentAyah;
-let transcript = [];
-
-export const setCurrentAyah = (ayah) => {
-  currentAyah = ayah
-}
-
-export const getCurrentAyah = () => currentAyah;
-
-export const findDiff = (socket, text) => {
-  if (transcript) {
-    transcript = text.split(" ");
+export class Transcriber {
+  constructor(callback) {
+    this.currentAyah = null;
+    this.transcript = [];
+    this.resultsCallback = callback;
   }
-  console.log('current ayah: ', currentAyah);
-  console.log('final string: ', text);
-  for (let word in transcript) {
-    const match = checkSequence(word);
-    socket.emit('handleMatchingResult', {
-      match,
-      word: transcript[word],
-      index: Number(word),
-    });
-  }
-}
 
-const checkSequence = (wordIndex) => {
-  console.log('next three: ', currentAyah.split(" ").slice(wordIndex, wordIndex + 3));
-  return transcript[wordIndex] in currentAyah.split(" ").slice(wordIndex, wordIndex + 3);
+  setCurrentAyah = (ayah) => {
+    this.currentAyah = ayah
+  }
+
+  getCurrentAyah = () => this.currentAyah;
+
+  findDiff = (text) => {
+    if (this.transcript) {
+      this.transcript = text.split(" ");
+    }
+    console.log('current ayah: ', this.currentAyah);
+    console.log('final string: ', text);
+    for (let word in this.transcript) {
+      const match = this.checkSequence(word);
+      this.resultsCallback({
+        match,
+        word: this.transcript[word],
+        index: Number(word),
+      })
+    }
+  }
+
+  checkSequence = (wordIndex) => {
+    console.log('next three: ', this.currentAyah.split(" ").slice(wordIndex, wordIndex + 3));
+    return this.transcript[wordIndex] in this.currentAyah.split(" ").slice(wordIndex, wordIndex + 3);
+  }
 }
