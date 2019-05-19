@@ -53,7 +53,7 @@ describe('Basic tests', function () {
   let client1, ayahData;
 
   before('Loading wavs...', function(done) {
-    let ayahFile = fs.createReadStream('test/001001.wav');
+    let ayahFile = fs.createReadStream('test/audio/001001.wav');
     let ayahReader = wav.Reader()
 
     ayahReader.on('format', function (format) {
@@ -130,7 +130,7 @@ describe('Multi Ayat tests', function () {
   before('Loading wavs...', function(done) {
     let ayatList = ['001001.wav', '001002.wav', '001003.wav'];
     eachOf(ayatList, (ayahFile, ayahIndex, cb) => {
-      let ayahStream = fs.createReadStream(`test/${ayahFile}`);
+      let ayahStream = fs.createReadStream(`test/audio/${ayahFile}`);
       let ayahReader = wav.Reader()
 
       ayahReader.on('format', function (format) {
@@ -186,7 +186,7 @@ describe('Multi client test', function () {
   before('Loading wavs...', function(done) {
     let ayatList = ['001001.wav', '001002.wav', '001003.wav'];
     eachOf(ayatList, (ayahFile, ayahIndex, cb) => {
-      let ayahStream = fs.createReadStream(`test/${ayahFile}`);
+      let ayahStream = fs.createReadStream(`test/audio/${ayahFile}`);
       let ayahReader = wav.Reader()
 
       ayahReader.on('format', function (format) {
