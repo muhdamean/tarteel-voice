@@ -56,7 +56,6 @@ export class RecognitionClient {
   endStream = () => {
     if (this.recognizeStream) {
       this.recognizeStream.end();
-      this.recognizeStream = null;
     }
   }
 

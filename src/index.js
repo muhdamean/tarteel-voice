@@ -9,23 +9,81 @@ import { Transcriber } from './transcribe';
 
 require('dotenv').config()
 
+// Create express server for static assets
 const app = express();
-
-const server = http.Server(app);
-
-const io = SocketIo(server);
-
 app.get('/', (req, res) => {
   res.send('Hello world!');
 })
 
+// Create socket.io server for streaming audio
+const server = http.Server(app);
+const io = SocketIo(server);
+
 io.on('connection', (socket) => {
-  console.log('Connected: ', socket.id);
+  console.log(`[${socket.id}] Connected`);
+
   socket.recognitionClient = null;
   socket.fileSaver = null;
   socket.transcriber = null;
 
+  /**
+   * startStream event starts and initializes the recogntion, file saving and transcription modules
+   */
+  socket.on('startStream', (options) => {
+    console.log(`[${socket.id}] Initializing stream`);
+    socket.globalOptions = options;
+
+    // Start recognition client
+    socket.recognitionClient = new RecognitionClient(socket.onPartialResults, socket.onFinalResults, (err) => {console.log(err)})
+    socket.recognitionClient.startStream()
+
+    // Start file saver
+    socket.fileSaver = new FileSaver()
+    socket.fileSaver.startFileSave();
+    socket.on('upload', socket.fileSaver.uploadData);
+
+    // Start transcriber if requested
+    if (socket.globalOptions.type === 'transcribe') {
+      socket.transcriber = new Transcriber((data) => socket.emit('handleMatchingResult', data))
+    }
+  });
+
+  /**
+   * endStream event shuts all existing modules down
+   */
+  socket.on('endStream', () => {
+    console.log(`[${socket.id}] Ending stream`);
+
+    if (socket.recognitionClient) {
+      socket.recognitionClient.endStream();
+    }
+
+    if (socket.fileSaver) {
+      socket.fileSaver.endFileSave();
+    }
+  });
+
+  /**
+   * binaryAudioData event receives audio chunks from the client
+   */
+  socket.on("binaryAudioData", (chunk) => {
+    if (socket.recognitionClient) {
+      socket.recognitionClient.handleReceivedData(chunk)
+    }
+
+    if (socket.fileSaver) {
+      socket.fileSaver.handleDataFileSave(chunk);
+    }
+  });
+
+  socket.on('setCurrentAyah', (ayah) => {
+    if (socket.transcriber) {
+      socket.transcriber.setCurrentAyah(ayah)
+    }
+  });
+
   socket.onPartialResults = (data) => {
+    console.log(`[${socket.id}] Partial result`);
     if (data.results[0]) {
       socket.emit('speechData', data);
       if (socket.globalOptions.type === 'transcribe') {
@@ -37,6 +95,7 @@ io.on('connection', (socket) => {
   }
 
   socket.onFinalResults = (data) => {
+    console.log(`[${socket.id}] Final result`);
     if (data.results[0]) {
       socket.emit('speechData', data);
       console.log('Final word');
@@ -83,41 +142,6 @@ io.on('connection', (socket) => {
         console.log(e);
       });
   };
-
-  socket.on("binaryAudioData", (chunk) => {
-    socket.recognitionClient.handleReceivedData(chunk)
-    socket.fileSaver.handleDataFileSave(chunk);
-  });
-
-  socket.on('endStream', () => {
-    console.log('Ended!');
-    socket.recognitionClient.endStream();
-    socket.fileSaver.endFileSave();
-  });
-
-  socket.on('startStream', (options) => {
-    console.log('Starting...');
-    socket.globalOptions = options;
-
-    // Start recognition client
-    socket.recognitionClient = new RecognitionClient(socket.onPartialResults, socket.onFinalResults, (err) => {console.log(err)})
-    socket.recognitionClient.startStream()
-
-    // Start file saver
-    socket.fileSaver = new FileSaver()
-    socket.fileSaver.startFileSave();
-    socket.on('upload', socket.fileSaver.uploadData);
-
-    // Start transcriber if requested
-    if (socket.globalOptions.type === 'transcribe') {
-      socket.transcriber = new Transcriber((data) => socket.emit('handleMatchingResult', data))
-    }
-  });
-
-  socket.on('setCurrentAyah', (ayah) => {
-    socket.transcriber.setCurrentAyah(ayah)
-  });
-
 });
 
 server.listen(5000, () => {

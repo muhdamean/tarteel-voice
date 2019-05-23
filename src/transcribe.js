@@ -15,8 +15,8 @@ export class Transcriber {
     if (this.transcript) {
       this.transcript = text.split(" ");
     }
-    console.log('current ayah: ', this.currentAyah);
-    console.log('final string: ', text);
+    // console.log('current ayah: ', this.currentAyah);
+    // console.log('final string: ', text);
     for (let word in this.transcript) {
       const match = this.checkSequence(word);
       this.resultsCallback({
@@ -28,7 +28,7 @@ export class Transcriber {
   }
 
   checkSequence = (wordIndex) => {
-    console.log('next three: ', this.currentAyah.split(" ").slice(wordIndex, wordIndex + 3));
+    // console.log('next three: ', this.currentAyah.split(" ").slice(wordIndex, wordIndex + 3));
     return this.transcript[wordIndex] in this.currentAyah.split(" ").slice(wordIndex, wordIndex + 3);
   }
 }
