@@ -30,7 +30,9 @@ io.on('connection', (socket) => {
    * startStream event starts and initializes the recogntion, file saving and transcription modules
    */
   socket.on('startStream', (options) => {
-    console.log(`[${socket.id}] Initializing stream`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[${socket.id}] Initializing stream`);
+    }
     socket.globalOptions = options;
 
     // Start recognition client
@@ -52,7 +54,9 @@ io.on('connection', (socket) => {
    * endStream event shuts all existing modules down
    */
   socket.on('endStream', () => {
-    console.log(`[${socket.id}] Ending stream`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[${socket.id}] Ending stream`);
+    }
 
     if (socket.recognitionClient) {
       socket.recognitionClient.endStream();
@@ -82,33 +86,26 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.onPartialResults = (data) => {
-    console.log(`[${socket.id}] Partial result`);
-    if (data.results[0]) {
-      socket.emit('speechData', data);
-      if (socket.globalOptions.type === 'transcribe') {
-        if (Math.round(data.results[0].stability)) {
-          socket.transcriber.findDiff(data.results[0].alternatives[0].transcript);
-        }
-      }
+  socket.onPartialResults = (transcript) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[${socket.id}] Partial result: ${transcript}`);
+    }
+    socket.emit('speechData', transcript);
+    if (socket.globalOptions.type === 'transcribe') {
+        socket.transcriber.findDiff(transcript);
     }
   }
 
-  socket.onFinalResults = (data) => {
-    console.log(`[${socket.id}] Final result`);
-    if (data.results[0]) {
-      socket.emit('speechData', data);
-      console.log('Final word');
-      socket.recognitionClient.endStream();
+  socket.onFinalResults = (transcript) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[${socket.id}] Final result: ${transcript}`);
+    }
+    socket.emit('speechData', transcript);
 
-      let finalString =  data.results[0].alternatives[0].transcript;
-  
-      if (socket.globalOptions.type === 'recognition') {
-        socket.handleSearch(finalString);
-      } else {
-        socket.emit('nextAyah')
-        socket.recognitionClient.startStream();
-      }
+    if (socket.globalOptions.type === 'recognition') {
+      socket.handleSearch(transcript);
+    } else {
+      socket.emit('nextAyah');
     }
   }
 
@@ -118,8 +115,10 @@ io.on('connection', (socket) => {
   }
 
   socket.handleSearch = (query) => {
-    console.log('Query is: ', query);
-    socket.recognitionClient.endStream();
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[${socket.id}] Iqra query is: ${query}`);
+    }
+    // socket.recognitionClient.endStream();
     socket.emit('loading', true)
     query = query.trim();
     fetch('https://api.iqraapp.com/api/v3.0/search', {
