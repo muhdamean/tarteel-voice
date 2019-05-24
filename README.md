@@ -15,7 +15,4 @@ clone the repository then:
 
 `npm build` (to build the code)
 
-
-
-
-
+`npm run test` (to run the test suite)
