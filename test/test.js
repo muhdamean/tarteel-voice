@@ -14,19 +14,21 @@ let options = {
   'force new connection': true
 };
 
-let readOneSecond = (buffer, startSecond) => {
-  let currentByte = startSecond * 44100 * 2;
-  return buffer.slice(currentByte, currentByte + 44100 * 2)
+const numChunksPerSecond = 1;
+
+let readOneChunk = (buffer, startChunk) => {
+  let currentByte = startChunk * (44100 * 2 / numChunksPerSecond);
+  return buffer.slice(currentByte, currentByte + (44100 * 2 / numChunksPerSecond))
 }
 
-let streamNextSecond = (audioBuffer, cb, done, currIteration, numIterations) => {
-  let data = readOneSecond(audioBuffer, currIteration);
+let streamNextChunk = (audioBuffer, cb, done, currChunk, numChunks) => {
+  let data = readOneChunk(audioBuffer, currChunk);
   cb(data);
 
-  // console.log(`Iteration ${currIteration} of ${numIterations}: ${data.length}`);
+  console.log(`[Test] Streaming audio progress: ${((currChunk+1)/numChunks*100).toFixed(2)}%`);
 
-  if (currIteration < numIterations - 1) {
-    setTimeout(streamNextSecond, 1000, audioBuffer, cb, done, currIteration+1, numIterations)
+  if (currChunk < numChunks - 1) {
+    setTimeout(streamNextChunk, 1000/numChunksPerSecond, audioBuffer, cb, done, currChunk+1, numChunks)
   } else {
     done();
   }
@@ -34,15 +36,15 @@ let streamNextSecond = (audioBuffer, cb, done, currIteration, numIterations) => 
 
 let streamAudioInRealtime = (audioBuffer, cb, done) => {
   let duration = audioBuffer.length / (44100 * 2);
-  let numIterations = Math.ceil(duration);
+  let numChunks = Math.ceil(duration * numChunksPerSecond);
 
-  setTimeout(streamNextSecond, 1000, audioBuffer, cb, done, 0, numIterations)
+  setTimeout(streamNextChunk, 1000/numChunksPerSecond, audioBuffer, cb, done, 0, numChunks)
 }
 
 let streamMultipleAudioInRealtime = (audioBuffers, cb, done) => {
   eachSeries(audioBuffers, (audioBuffer, asyncDone) => {
       console.log("Streaming next ayah")
-      streamAudioInRealtime(audioBuffer, cb, asyncDone);
+      streamAudioInRealtime(audioBuffer, cb, asyncDone)
     },
     done
   )
