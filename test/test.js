@@ -1,9 +1,8 @@
-import { eachOf, eachSeries } from 'async';
 import { expect } from 'chai';
-import fs from 'fs';
 import io from 'socket.io-client';
-import toArray from 'stream-to-array';
-import wav from 'wav';
+
+import { streamAudioInRealtime, streamMultipleAudioInRealtime } from './utils';
+import { loadAudioFile, loadAudioFiles } from './utils';
 
 let app = require('../src/index');
 
@@ -14,59 +13,15 @@ let options = {
   'force new connection': true
 };
 
-const numChunksPerSecond = 1;
-
-let readOneChunk = (buffer, startChunk) => {
-  let currentByte = startChunk * (44100 * 2 / numChunksPerSecond);
-  return buffer.slice(currentByte, currentByte + (44100 * 2 / numChunksPerSecond))
-}
-
-let streamNextChunk = (audioBuffer, cb, done, currChunk, numChunks) => {
-  let data = readOneChunk(audioBuffer, currChunk);
-  cb(data);
-
-  console.log(`[Test] Streaming audio progress: ${((currChunk+1)/numChunks*100).toFixed(2)}%`);
-
-  if (currChunk < numChunks - 1) {
-    setTimeout(streamNextChunk, 1000/numChunksPerSecond, audioBuffer, cb, done, currChunk+1, numChunks)
-  } else {
-    done();
-  }
-}
-
-let streamAudioInRealtime = (audioBuffer, cb, done) => {
-  let duration = audioBuffer.length / (44100 * 2);
-  let numChunks = Math.ceil(duration * numChunksPerSecond);
-
-  setTimeout(streamNextChunk, 1000/numChunksPerSecond, audioBuffer, cb, done, 0, numChunks)
-}
-
-let streamMultipleAudioInRealtime = (audioBuffers, cb, done) => {
-  eachSeries(audioBuffers, (audioBuffer, asyncDone) => {
-      console.log("Streaming next ayah")
-      streamAudioInRealtime(audioBuffer, cb, asyncDone)
-    },
-    done
-  )
-}
-
 describe('Basic tests', function () {
   this.timeout(20000);
   let client1, ayahData;
 
   before('Loading wavs...', function(done) {
-    let ayahFile = fs.createReadStream('test/audio/001001.wav');
-    let ayahReader = wav.Reader()
-
-    ayahReader.on('format', function (format) {
-      toArray(ayahReader, function (err, arr) {
-        ayahData = Buffer.concat(arr)
-        ayahFile.close()
-        done();
-      })
+    loadAudioFile('test/audio/001001.wav', (data) => {
+      ayahData = data;
+      done();
     });
-
-    ayahFile.pipe(ayahReader);
   })
 
   it('recognize test', function (done) {
@@ -131,21 +86,10 @@ describe('Multi Ayat tests', function () {
 
   before('Loading wavs...', function(done) {
     let ayatList = ['001001.wav', 'silence.wav', '001002.wav', 'silence.wav', '001003.wav'];
-    eachOf(ayatList, (ayahFile, ayahIndex, cb) => {
-      let ayahStream = fs.createReadStream(`test/audio/${ayahFile}`);
-      let ayahReader = wav.Reader()
-
-      ayahReader.on('format', function (format) {
-        toArray(ayahReader, function (err, arr) {
-          ayatData[ayahIndex] = Buffer.concat(arr)
-          console.log(`Loaded ${ayahFile}`);
-          ayahStream.close()
-          cb();
-        })
-      });
-
-      ayahStream.pipe(ayahReader);
-    }, done);
+    loadAudioFiles(ayatList, (data) => {
+      ayatData = data;
+      done();
+    });
   })
 
   it('transcribe test', function (done) {
@@ -187,21 +131,10 @@ describe('Multi client test', function () {
 
   before('Loading wavs...', function(done) {
     let ayatList = ['001001.wav', 'silence.wav', '001002.wav', 'silence.wav', '001003.wav'];
-    eachOf(ayatList, (ayahFile, ayahIndex, cb) => {
-      let ayahStream = fs.createReadStream(`test/audio/${ayahFile}`);
-      let ayahReader = wav.Reader()
-
-      ayahReader.on('format', function (format) {
-        toArray(ayahReader, function (err, arr) {
-          ayatData[ayahIndex] = Buffer.concat(arr)
-          console.log(`Loaded ${ayahFile}`);
-          ayahStream.close()
-          cb();
-        })
-      });
-
-      ayahStream.pipe(ayahReader);
-    }, done);
+    loadAudioFiles(ayatList, (data) => {
+      ayatData = data;
+      done();
+    });
   })
 
   it('recognize test', function (done) {
@@ -325,18 +258,10 @@ describe('Long Audio tests', function () {
   let client1, ayahData;
 
   before('Loading wavs...', function(done) {
-    let ayahFile = fs.createReadStream('test/audio/002282.wav');
-    let ayahReader = wav.Reader()
-
-    ayahReader.on('format', function (format) {
-      toArray(ayahReader, function (err, arr) {
-        ayahData = Buffer.concat(arr)
-        ayahFile.close()
-        done();
-      })
+    loadAudioFile('test/audio/002282.wav', (data) => {
+      ayahData = data;
+      done();
     });
-
-    ayahFile.pipe(ayahReader);
   })
 
   it('recognize test', function (done) {
@@ -401,21 +326,10 @@ describe('Long Multi Ayat tests', function () {
 
   before('Loading wavs...', function(done) {
     let ayatList = ['002285.wav', 'silence.wav', '002286.wav'];
-    eachOf(ayatList, (ayahFile, ayahIndex, cb) => {
-      let ayahStream = fs.createReadStream(`test/audio/${ayahFile}`);
-      let ayahReader = wav.Reader()
-
-      ayahReader.on('format', function (format) {
-        toArray(ayahReader, function (err, arr) {
-          ayatData[ayahIndex] = Buffer.concat(arr)
-          console.log(`Loaded ${ayahFile}`);
-          ayahStream.close()
-          cb();
-        })
-      });
-
-      ayahStream.pipe(ayahReader);
-    }, done);
+    loadAudioFiles(ayatList, (data) => {
+      ayatData = data;
+      done();
+    });
   })
 
   it('transcribe test', function (done) {
