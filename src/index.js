@@ -20,7 +20,9 @@ const server = http.Server(app);
 const io = SocketIo(server);
 
 io.on('connection', (socket) => {
-  console.log(`[${socket.id}] Connected`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[${socket.id}] Connected`);
+  }
 
   socket.recognitionClient = null;
   socket.fileSaver = null;
@@ -80,12 +82,20 @@ io.on('connection', (socket) => {
     }
   });
 
+  /**
+   * setCurrentAyah sets the current ayah from the client for transcribe mode
+   */
   socket.on('setCurrentAyah', (ayah) => {
     if (socket.transcriber) {
       socket.transcriber.setCurrentAyah(ayah)
     }
   });
 
+  /**
+   * Function that receives partial transcripts from the speech client. 
+   * Transcripts may change in the future. Currently, we use partial outputs
+   * only for `transcribe` mode and not `recognition` mode.
+   */
   socket.onPartialResults = (transcript) => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`[${socket.id}] Partial result: ${transcript}`);
@@ -96,6 +106,12 @@ io.on('connection', (socket) => {
     }
   }
 
+  /**
+   * Function that receives final transcripts from the speech client. 
+   * Currently, we use final transcripts to start the iqra search in 
+   * `recognition` mode. In `transcribe` mode, we just assume that the
+   * current ayah has ended, and signal the client with `nextAyah`.
+   */
   socket.onFinalResults = (transcript) => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`[${socket.id}] Final result: ${transcript}`);
@@ -109,11 +125,19 @@ io.on('connection', (socket) => {
     }
   }
 
+  /**
+   * Error handler, current just streams the error to the client
+   * and ends the connection.
+   */
   socket.onError = (errorMsg) => {
     socket.emit('streamError', errorMsg);
     socket.emit('endStream');
   }
 
+  /**
+   * Iqra search function
+   * In the future, this should be factored out into its own module
+   */
   socket.handleSearch = (query) => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`[${socket.id}] Iqra query is: ${query}`);

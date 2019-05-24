@@ -18,7 +18,9 @@ let streamNextChunk = (audioBuffer, cb, done, currChunk, numChunks) => {
   let data = readOneChunk(audioBuffer, currChunk);
   cb(data);
 
-  console.log(`[Test] Streaming audio progress: ${((currChunk+1)/numChunks*100).toFixed(2)}%`);
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Test] Streaming audio progress: ${((currChunk+1)/numChunks*100).toFixed(2)}%`);
+  }
 
   if (currChunk < numChunks - 1) {
     setTimeout(streamNextChunk, 1000/numChunksPerSecond, audioBuffer, cb, done, currChunk+1, numChunks);
@@ -38,7 +40,9 @@ export const streamAudioInRealtime = (audioBuffer, cb, done) => {
 // Stream multiple audio files in sequence
 export const streamMultipleAudioInRealtime = (audioBuffers, cb, done) => {
   eachSeries(audioBuffers, (audioBuffer, asyncDone) => {
-      console.log("[Test] Streaming next ayah");
+      if (process.env.NODE_ENV === 'development') {
+        console.log("[Test] Streaming next ayah");
+      }
       streamAudioInRealtime(audioBuffer, cb, asyncDone);
     },
     done
@@ -74,7 +78,9 @@ export const loadAudioFiles = (audioFilePaths, done) => {
     audioReader.on('format', function (format) {
       toArray(audioReader, function (err, arr) {
         audioData[audioIndex] = Buffer.concat(arr)
-        console.log(`Loaded ${audioFilePath}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[Test] Loaded ${audioFilePath}`);
+        }
         audioStream.close()
         cb();
       })
