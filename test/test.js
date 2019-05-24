@@ -51,7 +51,7 @@ let streamMultipleAudioInRealtime = (audioBuffers, cb, done) => {
 }
 
 describe('Basic tests', function () {
-  this.timeout(10000);
+  this.timeout(20000);
   let client1, ayahData;
 
   before('Loading wavs...', function(done) {
@@ -123,14 +123,14 @@ describe('Basic tests', function () {
 });
 
 describe('Multi Ayat tests', function () {
-  this.timeout(30000);
+  this.timeout(50000);
   let client1,
       ayatData = [null, null, null],
       ayatText = ['بسم الله الرحمن الرحيم','الحمد لله رب العالمين','الرحمن الرحيم'],
       currentAyah = 0;
 
   before('Loading wavs...', function(done) {
-    let ayatList = ['001001.wav', '001002.wav', '001003.wav'];
+    let ayatList = ['001001.wav', 'silence.wav', '001002.wav', 'silence.wav', '001003.wav'];
     eachOf(ayatList, (ayahFile, ayahIndex, cb) => {
       let ayahStream = fs.createReadStream(`test/audio/${ayahFile}`);
       let ayahReader = wav.Reader()
@@ -182,11 +182,11 @@ describe('Multi Ayat tests', function () {
 describe('Multi client test', function () {
   this.timeout(120000);
   let client1, client2,
-      ayatData = [null, null, null],
+      ayatData = [null, null, null, null, null],
       ayatText = ['بسم الله الرحمن الرحيم','الحمد لله رب العالمين','الرحمن الرحيم'];
 
   before('Loading wavs...', function(done) {
-    let ayatList = ['001001.wav', '001002.wav', '001003.wav'];
+    let ayatList = ['001001.wav', 'silence.wav', '001002.wav', 'silence.wav', '001003.wav'];
     eachOf(ayatList, (ayahFile, ayahIndex, cb) => {
       let ayahStream = fs.createReadStream(`test/audio/${ayahFile}`);
       let ayahReader = wav.Reader()
@@ -219,18 +219,18 @@ describe('Multi client test', function () {
           }, () => {
             client1.emit('endStream');
           })
-      }, 1000)
+      }, 100)
     });
 
     client2.on('connect', function() {
       setTimeout(() => {
         client2.emit('startStream', {type: 'recognition'});
-          streamAudioInRealtime(ayatData[1], (data) => {
+          streamAudioInRealtime(ayatData[2], (data) => {
             client2.emit('binaryAudioData', data);
           }, () => {
             client2.emit('endStream');
           })
-      }, 2000)
+      }, 3000)
     });
 
     // Check for correct ayah recognition from both clients
@@ -266,24 +266,24 @@ describe('Multi client test', function () {
       setTimeout(() => {
         client1.emit('startStream', {type: 'transcribe'});
         client1.emit('setCurrentAyah', ayatText[0]);
-        streamMultipleAudioInRealtime(ayatData.slice(0,2), (data) => {
+        streamMultipleAudioInRealtime(ayatData.slice(0,3), (data) => {
           client1.emit('binaryAudioData', data);
         }, () => {
           client1.emit('endStream');
         })
-      }, 1000)
+      }, 100)
     });
 
     client2.on('connect', function() {
       setTimeout(() => {
         client2.emit('startStream', {type: 'transcribe'});
         client2.emit('setCurrentAyah', ayatText[1]);
-        streamMultipleAudioInRealtime(ayatData.slice(1,3), (data) => {
+        streamMultipleAudioInRealtime(ayatData.slice(2,5), (data) => {
           client2.emit('binaryAudioData', data);
         }, () => {
           client2.emit('endStream');
         })
-      }, 2000)
+      }, 3000)
     });
 
     // Check for next ayah
@@ -317,5 +317,134 @@ describe('Multi client test', function () {
       }
     })
 
+  });
+});
+
+describe('Long Audio tests', function () {
+  this.timeout(180000);
+  let client1, ayahData;
+
+  before('Loading wavs...', function(done) {
+    let ayahFile = fs.createReadStream('test/audio/002282.wav');
+    let ayahReader = wav.Reader()
+
+    ayahReader.on('format', function (format) {
+      toArray(ayahReader, function (err, arr) {
+        ayahData = Buffer.concat(arr)
+        ayahFile.close()
+        done();
+      })
+    });
+
+    ayahFile.pipe(ayahReader);
+  })
+
+  it('recognize test', function (done) {
+    // Set up client1 connection
+    client1 = io.connect(socketUrl, options);
+
+    client1.on('speechData', (msg) => {
+      // TODO: Do some testing with partial transcripts
+      // console.log(msg)
+    });
+
+    client1.on('foundResults', (msg) => {
+      expect(msg['matches'][0]['ayahNum']).to.equal(282);
+      expect(msg['matches'][0]['surahNum']).to.equal(2);
+      client1.disconnect();
+      done();
+    })
+
+    client1.on('connect', function() {
+      client1.emit('startStream', {type: 'recognition'});
+      streamAudioInRealtime(ayahData, (data) => {
+        client1.emit('binaryAudioData', data);
+      }, () => {
+        client1.emit('endStream');
+      })
+    });
+  });
+
+  it('transcribe test', function (done) {
+    // Set up client1 connection
+    client1 = io.connect(socketUrl, options);
+
+    client1.on('handleMatchingResult', (msg) => {
+      // TODO: Do something with intermediate results
+      // console.log(msg)
+    });
+
+    client1.on('nextAyah', () => {
+      console.log("Next ayah")
+      client1.disconnect();
+      done();
+    })
+
+    client1.on('connect', function(){
+      client1.emit('startStream', {type: 'transcribe'});
+      client1.emit('setCurrentAyah', 'بسم الله الرحمن الرحيم');
+      streamAudioInRealtime(ayahData, (data) => {
+        client1.emit('binaryAudioData', data);
+      }, () => {
+        client1.emit('endStream');
+      })
+    });
+  });
+});
+
+describe('Long Multi Ayat tests', function () {
+  this.timeout(180000);
+  let client1,
+      ayatData = [null, null],
+      ayatText = ['بسم الله الرحمن الرحيم','الحمد لله رب العالمين'],
+      currentAyah = 0;
+
+  before('Loading wavs...', function(done) {
+    let ayatList = ['002285.wav', 'silence.wav', '002286.wav'];
+    eachOf(ayatList, (ayahFile, ayahIndex, cb) => {
+      let ayahStream = fs.createReadStream(`test/audio/${ayahFile}`);
+      let ayahReader = wav.Reader()
+
+      ayahReader.on('format', function (format) {
+        toArray(ayahReader, function (err, arr) {
+          ayatData[ayahIndex] = Buffer.concat(arr)
+          console.log(`Loaded ${ayahFile}`);
+          ayahStream.close()
+          cb();
+        })
+      });
+
+      ayahStream.pipe(ayahReader);
+    }, done);
+  })
+
+  it('transcribe test', function (done) {
+    client1 = io.connect(socketUrl, options);
+
+    client1.on('handleMatchingResult', (msg) => {
+      // TODO: Do something with intermediate results
+      // console.log(msg)
+    });
+
+    client1.on('nextAyah', () => {
+      console.log("Next ayah")
+      currentAyah += 1;
+      if (currentAyah < ayatText.length) {
+        client1.emit('setCurrentAyah', ayatText[currentAyah]);
+      } else {
+        client1.disconnect();
+        done();
+      }
+    })
+
+    client1.on('connect', function(){
+      client1.emit('startStream', {type: 'transcribe'});
+      client1.emit('setCurrentAyah', ayatText[currentAyah]);
+      streamMultipleAudioInRealtime(ayatData, (data) => {
+        client1.emit('binaryAudioData', data);
+      }, () => {
+        client1.emit('endStream');
+      })
+    });
   });
 });
