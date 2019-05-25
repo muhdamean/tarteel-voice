@@ -7,7 +7,7 @@ export class Transcriber {
 
   setCurrentAyah = (ayah) => {
     this.currentAyah = ayah
-  }
+  };
 
   getCurrentAyah = () => this.currentAyah;
 
@@ -25,7 +25,7 @@ export class Transcriber {
         index: Number(word),
       })
     }
-  }
+  };
 
   checkSequence = (wordIndex) => {
     // console.log('next three: ', this.currentAyah.split(" ").slice(wordIndex, wordIndex + 3));

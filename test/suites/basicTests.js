@@ -5,16 +5,16 @@ import io from 'socket.io-client';
 import { streamAudioInRealtime } from '../utils';
 import { loadAudioFile } from '../utils';
 
-export default function suite (mochaContext, socketUrl, options) {
+export default function suite(mochaContext, socketUrl, options) {
   mochaContext.timeout(20000);
   let client1, ayahData;
 
-  before('Loading wavs...', function(done) {
+  before('Loading wavs...', function (done) {
     loadAudioFile('test/audio/001001.wav', (data) => {
       ayahData = data;
       done();
     });
-  })
+  });
 
   it('recognize test', function (done) {
     // Set up client1 connection
@@ -22,7 +22,7 @@ export default function suite (mochaContext, socketUrl, options) {
 
     client1.on('speechData', (msg) => {
       // TODO: Do some testing with partial transcripts
-      // console.log(msg)
+      console.log(msg)
     });
 
     client1.on('foundResults', (msg) => {
@@ -30,9 +30,9 @@ export default function suite (mochaContext, socketUrl, options) {
       expect(msg['matches'][0]['surahNum']).to.equal(1);
       client1.disconnect();
       done();
-    })
+    });
 
-    client1.on('connect', function() {
+    client1.on('connect', function () {
       client1.emit('startStream', {type: 'recognition'});
       streamAudioInRealtime(ayahData, (data) => {
         client1.emit('binaryAudioData', data);
@@ -57,9 +57,9 @@ export default function suite (mochaContext, socketUrl, options) {
       }
       client1.disconnect();
       done();
-    })
+    });
 
-    client1.on('connect', function(){
+    client1.on('connect', function () {
       client1.emit('startStream', {type: 'transcribe'});
       client1.emit('setCurrentAyah', 'بسم الله الرحمن الرحيم');
       streamAudioInRealtime(ayahData, (data) => {

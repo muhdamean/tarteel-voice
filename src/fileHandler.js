@@ -1,6 +1,7 @@
 import wav from 'wav';
 import upload from './aws/upload';
 import uuidv1 from 'uuid/v1';
+import * as audio_constants from '../config/audioConstants';
 
 import { saveItem } from './aws/db';
 
@@ -11,11 +12,11 @@ export class FileSaver {
 
   startFileSave = () => {
     this.outputFile = new wav.Writer({
-      channels: 1,
-      sampleRate: 48000,
-      bitDepth: 16
+      channels: audio_constants.CHANNELS,
+      sampleRate: audio_constants.SAMPLE_RATE_HZ,
+      bitDepth: audio_constants.BIT_DEPTH
     });
-  }
+  };
 
   uploadData = (data) => {
     const id = uuidv1();
@@ -30,13 +31,13 @@ export class FileSaver {
         console.log('error: ', e);
       })
     });
-  }
+  };
 
   handleDataFileSave = (data) => {
     if (this.outputFile) {
       this.outputFile.write(data);
     }
-  }
+  };
 
   endFileSave = () => {
     this.outputFile.end();

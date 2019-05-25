@@ -1,12 +1,13 @@
 import speech from '@google-cloud/speech';
+import * as audio_constants from '../config/audioConstants';
 
 export class RecognitionClient {
   constructor(onPartialResults, onFinalResults, onError) {
     this.requestParams = {
       config: {
-        encoding: 'LINEAR16',
-        sampleRateHertz: 44100,
-        languageCode: 'ar-AE',
+        encoding: audio_constants.ENCODING,
+        sampleRateHertz: audio_constants.GC_SAMPLE_RATE_HZ,
+        languageCode: audio_constants.LANGUAGE_CODE,
         profanityFilter: false,
         enableWordTimeOffsets: true,
       },
@@ -18,7 +19,7 @@ export class RecognitionClient {
     this.onError = onError;
 
     this.speechClient = new speech.SpeechClient({
-      keyFilename: './config/tarteel-236900-2486c1058706.json',
+      keyFilename: audio_constants.KEY_FILE_PATH,
     }); // Creates a client.
 
     // We maintain two recognition streams, so that we can switch between them
@@ -40,11 +41,11 @@ export class RecognitionClient {
     this.nextStreamResultsQueue = [];
     this.previousPartialTranscript = "";
 
-    let currentIdx = this.currentRecognizeStreamIdx
+    let currentIdx = this.currentRecognizeStreamIdx;
     this.recognizeStreams[currentIdx] = this.speechClient
       .streamingRecognize(this.requestParams)
       .on('error', (error) => {
-        console.log(error)
+        console.log(error);
         // if (error.code === 11) {
         //   this.onError('Duration exceeded 65 seconds')
         //   return;
@@ -52,7 +53,7 @@ export class RecognitionClient {
         this.onError(error)
       })
       .on('data', (data) => this.handleData(currentIdx, data));
-  }
+  };
 
   handleData = (streamIdx, data) => {
     // Check if we have some actual transcriptions
@@ -103,7 +104,7 @@ export class RecognitionClient {
         this.onPartialResults(this.previousPartialTranscript + currentTranscript);
       }
     }
-  }
+  };
 
   /**
   * Closes the recognize stream
@@ -112,7 +113,7 @@ export class RecognitionClient {
     if (this.recognizeStreams[this.currentRecognizeStreamIdx]) {
       this.recognizeStreams[this.currentRecognizeStreamIdx].end();
     }
-  }
+  };
 
   /**
   * Receives streaming data and writes it to the recognizeStream for transcription
@@ -120,7 +121,7 @@ export class RecognitionClient {
   * @param {Buffer} data A section of audio data (ArrayBuffer)
   */
   handleReceivedData = (data) => {
-    this.currentRequestDuration += data.length / (this.requestParams.config.sampleRateHertz * 2)
+    this.currentRequestDuration += data.length / (this.requestParams.config.sampleRateHertz * 2);
 
     if (this.currentRequestDuration > this.maxDurationPerRequest) {
       // End old stream: Might still receive results after ending
@@ -129,7 +130,7 @@ export class RecognitionClient {
 
       // Start new stream
       this.currentRecognizeStreamIdx = (this.currentRecognizeStreamIdx + 1) % this.recognizeStreams.length;
-      let currentIdx = this.currentRecognizeStreamIdx
+      let currentIdx = this.currentRecognizeStreamIdx;
       this.recognizeStreams[currentIdx] = this.speechClient
         .streamingRecognize(this.requestParams)
         .on('error', (error) => {
@@ -149,6 +150,7 @@ export class RecognitionClient {
   }
 }
 
+// TODO: Remove
 export class LegacyRecognitionClient {
   constructor(onPartialResults, onFinalResults, onError) {
     this.requestParams = {
@@ -176,7 +178,7 @@ export class LegacyRecognitionClient {
       .streamingRecognize(this.requestParams)
       .on('error', (error) => {
         if (error.code === 11) {
-          this.onError('Duration exceeded 65 seconds')
+          this.onError('Duration exceeded 65 seconds');
           return;
         }
         this.onError(error)
