@@ -1,7 +1,6 @@
 import SocketIo from 'socket.io';
 import http from 'http';
 import express from 'express';
-import fetch from 'node-fetch';
 
 import { FileSaver } from './fileHandler';
 import { RecognitionClient } from './speech';
@@ -32,11 +31,10 @@ io.on('connection', (socket) => {
     /**
      * startStream event starts and initializes the recogntion, file saving and transcription modules
      */
-    socket.on('startStream', (options) => {
+    socket.on('startStream', () => {
         if (process.env.NODE_ENV === 'development') {
             console.log(`[${socket.id}] Initializing stream`);
         }
-        socket.globalOptions = options;
 
         // Start recognition client
         socket.recognitionClient = new RecognitionClient(
@@ -51,10 +49,12 @@ io.on('connection', (socket) => {
         socket.fileSaver.startFileSave();
         socket.on('upload', socket.fileSaver.uploadData);
 
-        // Start transcriber if requested
-        if (socket.globalOptions.type === 'transcribe') {
-            socket.transcriber = new Transcriber((data) => socket.emit('handleMatchingResult', data))
-        }
+        // Start transcriber
+        socket.transcriber = new Transcriber(
+            socket.onAyahFound,
+            socket.onMatchFound
+        );
+        //(data) => socket.emit('handleMatchingResult', data))
     });
 
     /**
@@ -67,17 +67,23 @@ io.on('connection', (socket) => {
 
         if (socket.recognitionClient) {
             socket.recognitionClient.endStream();
+        } else {
+            // TODO: make this good
+            socket.emit('streamWarning', '')
         }
 
         if (socket.fileSaver) {
             socket.fileSaver.endFileSave();
+        } else {
+            // TODO: make this good
+            socket.emit('streamWarning', '')
         }
     });
 
     /**
      * binaryAudioData event receives audio chunks from the client
      */
-    socket.on("binaryAudioData", (chunk) => {
+    socket.on('sendStream', (chunk) => {
         if (socket.recognitionClient) {
             socket.recognitionClient.handleReceivedData(chunk)
         }
@@ -105,10 +111,15 @@ io.on('connection', (socket) => {
         if (process.env.NODE_ENV === 'development') {
             console.log(`[${socket.id}] Partial result: ${transcript}`);
         }
-        socket.emit('speechData', transcript);
-        if (socket.globalOptions.type === 'transcribe') {
-            socket.transcriber.findDiff(transcript);
-        }
+
+        // Propagate raw transcript to client
+        socket.emit('speechResult', {
+            'text': transcript,
+            'isFinal': false
+        });
+
+        // call onPartial
+        socket.transcriber.onTranscript(transcript, false);
     };
 
     /**
@@ -121,13 +132,14 @@ io.on('connection', (socket) => {
         if (process.env.NODE_ENV === 'development') {
             console.log(`[${socket.id}] Final result: ${transcript}`);
         }
-        socket.emit('speechData', transcript);
 
-        if (socket.globalOptions.type === 'recognition') {
-            socket.handleSearch(transcript);
-        } else {
-            socket.emit('nextAyah');
-        }
+        // Propagate raw transcript to client
+        socket.emit('speechResult', {
+            'text': transcript,
+            'isFinal': true
+        });
+
+        socket.transcriber.onTranscript(transcript, true);
     };
 
     /**
@@ -139,37 +151,21 @@ io.on('connection', (socket) => {
         socket.emit('endStream');
     };
 
-    /**
-     * Iqra search function
-     * In the future, this should be factored out into its own module
-     */
-    socket.handleSearch = (query) => {
-        if (process.env.NODE_ENV === 'development') {
-            console.log(`[${socket.id}] Iqra query is: ${query}`);
-        }
-        // socket.recognitionClient.endStream();
-        socket.emit('loading', true);
-        query = query.trim();
-        fetch('https://api.iqraapp.com/api/v3.0/search', {
-            method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                arabicText: query,
-                translation: 'en-hilali',
-                apikey: process.env.IQRA_API_KEY,
-            }),
-        })
-            .then(res => res.json())
-            .then(json => {
-                socket.emit('foundResults', json.result);
-            })
-            .catch(e => {
-                console.log(e);
-            });
-    };
+    socket.onAyahFound = (surahNum, ayahNum, ayahText) => {
+        socket.emit('ayahFound', {
+            'surahNum': surahNum,
+            'ayahNum': ayahNum,
+            'ayahWords': ayahText.trim().split(' ')
+        });
+    }
+
+    socket.onMatchFound = (surahNum, ayahNum, ayahWordIndex) => {
+        socket.emit('matchFound', {
+            'surahNum': surahNum,
+            'ayahNum': ayahNum,
+            'wordCount': ayahWordIndex
+        });
+    }
 });
 
 server.listen(5000, () => {
