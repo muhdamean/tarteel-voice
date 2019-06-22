@@ -1,4 +1,6 @@
 // Import test suites
+import transcriberTests from './suites/transcriberTests';
+
 import basicTests from './suites/basicTests';
 import multiAyatTests from './suites/multiAyatTests';
 import multiClientTests from './suites/multiClientTests';
@@ -15,7 +17,12 @@ let options = {
   'force new connection': true
 };
 
-// Run test suite
+// Run unit tests
+describe('Unit tests', function() {
+  describe('Transcriber tests', function() {transcriberTests(this);});
+})
+
+// Run integration test suite
 describe('Basic tests', function() { basicTests(this, socketUrl, options);});
 describe('Multi Ayat tests', function() { multiAyatTests(this, socketUrl, options);});
 describe('Multi client test', function() { multiClientTests(this, socketUrl, options);});

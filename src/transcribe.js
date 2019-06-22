@@ -1,19 +1,40 @@
+import async from 'async';
 import fetch from 'node-fetch';
 import levenshtein from 'levenshtein-edit-distance';
-import queue from 'async/queue';
 
 export class Transcriber {
     constructor(onAyahFound, onMatchFound) {
-        this.currentAyah = null;
+        // Current Ayah trackers
         this.currentSurahNum = null;
         this.currentAyahNum = null;
 
+        // Textual representations of ayah
+        // We store next ayah for quick switching
+        this.currentAyah = null;
+        this.nextAyah = null;
+
+        // Partial transcript so far. We do not rely on isFinal values,
+        // since they just indicate silence (which can happen in the middle
+        // of an ayah). Instead, we maintain a continuous partial transcript
+        // and remove old ayat as we detect them lexically.
+        this.partialTranscript = null;
+        this.lastFinalizedTranscript = '';
+        this.currentPartialAyahIndex = 0;
+
+        // Callbacks
         this.onAyahFound = onAyahFound;
         this.onMatchFound = onMatchFound;
 
-        this.processingQueue = queue(this.processTranscript, 1);
+        // Processing queue to avoid race conditions, as we rely on
+        // several external resources (iqra api, tarteel quran text api)
+        this.processingQueue = async.priorityQueue(this.processTask, 1);
 
+        // Hyper parameters
         this.SLACK = 10;
+    }
+
+    destructor = () => {
+        this.processingQueue.kill();
     }
     
     setCurrentAyah = (ayah) => {
@@ -23,48 +44,95 @@ export class Transcriber {
     getCurrentAyah = () => this.currentAyah;
 
     onTranscript = (transcript, isFinal) => {
-        console.log("onTranscript process...")
         this.processingQueue.push({
+            'type': 'process-transcript',
             'transcript': transcript,
             'isFinal': isFinal
-        })
+        }, 2);
+    }
+
+    processTask = (task, done) => {
+        if (task['type'] === 'process-transcript') {
+            this.processTranscript(task, done);
+        } else if (task['type'] === 'get-ayah') {
+            this.getNextAyah(task, done);
+        }
     }
 
     processTranscript = (task, done) => {
-        console.log("Gonna process...")
+        // console.log("[Queue] Processing next transcript");
+        // Update partial transcript
+        if (task['isFinal']) {
+            this.lastFinalizedTranscript = `${this.lastFinalizedTranscript} ${task['transcript']}`;
+            this.partialTranscript = this.lastFinalizedTranscript;
+        } else {
+            this.partialTranscript = `${this.lastFinalizedTranscript} ${task['transcript']}`;
+        }
+
+        // console.log(this.partialTranscript)
+
         if (this.currentAyah === null) {
-            this.findAyah(task['transcript'], (result) => {
+            this.findAyah(this.partialTranscript, (result) => {
                 if (result['matches'].length >= 1) {
                     let surahNum = result['matches'][0]['surahNum'];
                     let ayahNum = result['matches'][0]['ayahNum'];
-                    let ayahText = result['matches'][0]['arabicAyah'];
 
-                    fetch(`https://api-dev.tarteel.io/v1/quran/ayah/?surah=${surahNum}&ayah=${ayahNum}`, {
-                        method: 'GET'
-                    })
-                    .then(res => res.json())
-                    .then(json => {
-                        console.log(json)
-                        let ayahText = json['results'][0]['text_simple'];
+                    let ayatList = [
+                        {'surahNum': surahNum, 'ayahNum': ayahNum},
+                        {'surahNum': surahNum, 'ayahNum': ayahNum+1}
+                    ]
+                    this.getAyat(ayatList, (err, results) => {
+                        let ayahText = results[0].ayahText;
                         this.onAyahFound(surahNum, ayahNum, ayahText);
 
                         this.currentAyah = ayahText;
+                        this.nextAyah = result === null ? null : results[1].ayahText;
                         this.currentSurahNum = surahNum;
                         this.currentAyahNum = ayahNum;
 
-                        this.findMatch(task['transcript'], done);
-                    })
+                        this.findMatch(this.partialTranscript.substring(this.currentPartialAyahIndex), done);
+                    });
                 } else {
                     // We are not sure about ayah, so just quit
                     done();
                 }
             })
         } else {
-            this.findMatch(task['transcript'], done);
+            this.findMatch(this.partialTranscript.substring(this.currentPartialAyahIndex), done);
         }
+    }
+
+    getNextAyah = (task, done) => {
+        // console.log("[Queue] Getting next ayah");
+        this.getAyah({'surahNum': task.surahNum, 'ayahNum': task.ayahNum}, (err, result) => {
+            this.nextAyah = result === null ? null : result.ayahText;
+            return done();
+        });
     }
     
     findMatch = (transcript, done) => {
+        if (transcript.length === 0) {
+            return done();
+        }
+        // console.log(`Partial transcript: ${this.partialTranscript}`);
+        // console.log(`Correct ayah: ${this.currentAyah}`);
+        if (transcript.length > 0 && this.nextAyahStart) {
+            // console.log("beginning new: " + transcript)
+            this.nextAyahStart = false;
+            this.currentAyahNum = this.currentAyahNum + 1;
+            // TODO: raise transcription error if we think we are at the end of a surah
+            // or retry with iqra i.e. when nextAyah == null
+            this.currentAyah = this.nextAyah;
+            this.nextAyah = null;
+
+            this.processingQueue.push({
+                type: 'get-ayah',
+                surahNum: this.currentSurahNum,
+                ayahNum: this.currentAyahNum + 1,
+            }, 1);
+
+            this.onAyahFound(this.currentSurahNum, this.currentAyahNum, this.currentAyah)
+        }
         let minDist = Number.MAX_VALUE;
         let finalSlack = Number.MAX_VALUE;
         for (let i=this.SLACK; i >= -this.SLACK; i--) {
@@ -76,16 +144,25 @@ export class Transcriber {
                 finalSlack = i;
             }
         }
+        // console.log(`Detected follow along: ${this.currentAyah.substring(0, transcript.length + finalSlack)}`);
         let matchedWords = this.currentAyah.substring(0, transcript.length + finalSlack).split(' ');
-        if (this.currentAyah[transcript.length + finalSlack] === ' ' || (transcript.length + finalSlack + 1) == this.currentAyah.length) {
+        if ((transcript.length + finalSlack) == this.currentAyah.length) {
+            // End of ayah - start looking for next ayah
+            // console.log("reach end of ayah!!!!")
+            this.onMatchFound(this.currentSurahNum, this.currentAyahNum, matchedWords.length);
+            this.currentPartialAyahIndex = Math.min(
+                this.currentPartialAyahIndex + transcript.length + finalSlack + 1,
+                this.partialTranscript.length
+            );
+            // console.log(this.partialTranscript.length + " " + this.currentPartialAyahIndex);
+            this.nextAyahStart = true;
+        } else if (this.currentAyah[transcript.length + finalSlack] === ' ') {
             this.onMatchFound(this.currentSurahNum, this.currentAyahNum, matchedWords.length);
         } else {
             this.onMatchFound(this.currentSurahNum, this.currentAyahNum, matchedWords.length - 1);
         }
 
-        done();
-
-        // TODO: Check if ayah end
+        return done();
     };
     
     /**
@@ -94,7 +171,7 @@ export class Transcriber {
     */
     findAyah = (query, callback) => {
         if (process.env.NODE_ENV === 'development') {
-            console.log(`[---] Iqra query is: ${query}`);
+            // console.log(`[---] Iqra query is: ${query}`);
         }
 
         query = query.trim();
@@ -116,7 +193,86 @@ export class Transcriber {
         })
         .catch(e => {
             // TODO: Probably should propagate to client
-            console.log(e);
+            // console.log(e);
         });
     };
+
+    /**
+     * Quran text retrieval function for a single ayah
+     *
+     * ayah: object
+     *  suranNum: int
+     *  ayahNum: int
+     *
+     * callback: function
+     *  signature: (error, results)
+     */
+    getAyah = (ayah, callback) => {
+        // TODO: url should be constant
+        fetch(`https://api-dev.tarteel.io/v1/quran/ayah/?surah=${ayah.surahNum}&ayah=${ayah.ayahNum}`, {
+            method: 'GET'
+        })
+        .then(res => res.json())
+        .then(json => {
+            // Check if we got any results
+            // List may be empty when we query for an out of bounds ayah
+            if (json['results'].length === 0) {
+                return callback(null, null);
+            } else {
+                let ayahText = json['results'][0]['text_simple'];
+
+                return callback(null, {
+                    'surahNum': ayah.surahNum,
+                    'ayahNum': ayah.ayahNum,
+                    'ayahText': ayahText
+                });
+            }
+        })
+        .catch(err => {
+            // TODO: Probably should propagate to client
+            // console.log("ayah fetch error")
+            // console.log(err)
+            return callback(err);
+        })
+    }
+
+    /**
+     * Quran text retrieval function for multiple ayat
+     */
+    getAyat = (ayatList, callback) => {
+        async.map(ayatList, (ayah, done) => {
+            if (ayah === null) {
+                return done(null, null);
+            }
+            // TODO: url should be constant
+            fetch(`https://api-dev.tarteel.io/v1/quran/ayah/?surah=${ayah.surahNum}&ayah=${ayah.ayahNum}`, {
+                method: 'GET'
+            })
+            .then(res => res.json())
+            .then(json => {
+                // Check if we got any results
+                // List may be empty when we query for an out of bounds ayah
+                if (json['results'].length === 0) {
+                    return done(null, null);
+                } else {
+                    let ayahText = json['results'][0]['text_simple'];
+
+                    return done(null, {
+                        'surahNum': ayah.surahNum,
+                        'ayahNum': ayah.ayahNum,
+                        'ayahText': ayahText
+                    });
+                }
+            })
+            .catch(err => {
+                // TODO: Probably should propagate to client
+                // console.log("ayah fetch error")
+                // console.log(err)
+                return done(err);
+            })
+        }, (err, results) => {
+            // TODO: error check
+            callback(err, results);
+        })
+    }
 }
