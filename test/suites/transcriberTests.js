@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { Transcriber } from '../../src/transcribe';
 
 export default function suite(mochaContext) {
-    mochaContext.timeout(20000);
+    mochaContext.timeout(30000);
 
     it('single ayah recognize test', function (done) {
         let onAyahFound = (surahNum, ayahNum, ayahText) => {
@@ -472,9 +472,6 @@ export default function suite(mochaContext) {
 
         // Set up partial transcripts
         let partialTranscripts = [
-            {'transcript': 'م الله', 'isFinal': false },
-            {'transcript': 'م الله', 'isFinal': false },
-            {'transcript': 'م الله', 'isFinal': false },
             {'transcript': 'م الله', 'isFinal': false },
             {'transcript': 'م الله الرحمن', 'isFinal': false },
             {'transcript': 'م الله الرحمن', 'isFinal': false },
