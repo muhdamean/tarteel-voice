@@ -31,6 +31,7 @@ export class Transcriber {
 
         // Hyper parameters
         this.SLACK = 10;
+        this.MAX_IQRA_MATCHES = 10;
     }
 
     destructor = () => {
@@ -72,10 +73,13 @@ export class Transcriber {
         // console.log(this.partialTranscript)
 
         if (this.currentAyah === null) {
-            this.findAyah(this.partialTranscript, (result) => {
-                if (result['matches'].length >= 1) {
-                    let surahNum = result['matches'][0]['surahNum'];
-                    let ayahNum = result['matches'][0]['ayahNum'];
+            this.findAyah(this.partialTranscript, (matches) => {
+                if (process.env.NODE_ENV === 'development') {
+                    console.log("[Follow along] Current Matches: " + matches);
+                }
+                if (matches.length == 1) {
+                    let surahNum = matches[0]['surahNum'];
+                    let ayahNum = matches[0]['ayahNum'];
 
                     let ayatList = [
                         {'surahNum': surahNum, 'ayahNum': ayahNum},
@@ -86,7 +90,7 @@ export class Transcriber {
                         this.onAyahFound(surahNum, ayahNum, ayahText);
 
                         this.currentAyah = ayahText;
-                        this.nextAyah = result === null ? null : results[1].ayahText;
+                        this.nextAyah = results === null ? null : results[1].ayahText;
                         this.currentSurahNum = surahNum;
                         this.currentAyahNum = ayahNum;
 
@@ -117,7 +121,9 @@ export class Transcriber {
         // console.log(`Partial transcript: ${this.partialTranscript}`);
         // console.log(`Correct ayah: ${this.currentAyah}`);
         if (transcript.length > 0 && this.nextAyahStart) {
-            // console.log("beginning new: " + transcript)
+            if (process.env.NODE_ENV === 'development') {
+                console.log("[Follow along] Beginning new ayah")
+            }
             this.nextAyahStart = false;
             this.currentAyahNum = this.currentAyahNum + 1;
             // TODO: raise transcription error if we think we are at the end of a surah
@@ -148,7 +154,9 @@ export class Transcriber {
         let matchedWords = this.currentAyah.substring(0, transcript.length + finalSlack).split(' ');
         if ((transcript.length + finalSlack) == this.currentAyah.length) {
             // End of ayah - start looking for next ayah
-            // console.log("reach end of ayah!!!!")
+            if (process.env.NODE_ENV === 'development') {
+                console.log("[Follow along] Detected end of ayah")
+            }
             this.onMatchFound(this.currentSurahNum, this.currentAyahNum, matchedWords.length);
             this.currentPartialAyahIndex = Math.min(
                 this.currentPartialAyahIndex + transcript.length + finalSlack + 1,
@@ -189,7 +197,30 @@ export class Transcriber {
         })
         .then(res => res.json())
         .then(json => {
-            callback(json.result)
+            let currentMatches = json.result.matches.map((e) => {return {'surahNum': e.surahNum, 'ayahNum': e.ayahNum}});
+
+            if (currentMatches.length == 0) {
+                callback(currentMatches);
+            } else if (currentMatches.length > this.MAX_IQRA_MATCHES) {
+                callback([]);
+            } else {
+                this.getAyat(currentMatches, (err, matches) => {
+                    let filteredMatches = []
+                    for (let idx = 0; idx < matches.length; idx++) {
+                        if (query.length > 5 && levenshtein(query, matches[idx].ayahText.substring(0, query.length + 5)) <= Math.floor(5 + 0.50 * query.length) && query.length/matches[idx].ayahText.length > 0.05) {
+                            filteredMatches.push(matches[idx]);
+                            if (process.env.NODE_ENV === 'development') {
+                                console.log(`[Follow along] matching ${query} with ${matches[idx].ayahText} MATCHED`)
+                            }
+                        } else {
+                            if (process.env.NODE_ENV === 'development') {
+                                console.log(`[Follow along] matching ${query} with ${matches[idx].ayahText} UNMATCHED`)
+                            }
+                        }
+                    }
+                    callback(filteredMatches);
+                });
+            }
         })
         .catch(e => {
             // TODO: Probably should propagate to client
@@ -266,8 +297,8 @@ export class Transcriber {
             })
             .catch(err => {
                 // TODO: Probably should propagate to client
-                // console.log("ayah fetch error")
-                // console.log(err)
+                console.log("ayah fetch error")
+                console.log(err)
                 return done(err);
             })
         }, (err, results) => {
