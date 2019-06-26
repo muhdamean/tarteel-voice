@@ -67,16 +67,10 @@ io.on('connection', (socket) => {
 
         if (socket.recognitionClient) {
             socket.recognitionClient.endStream();
-        } else {
-            // TODO: make this good
-            socket.emit('streamWarning', '')
         }
 
         if (socket.fileSaver) {
             socket.fileSaver.endFileSave();
-        } else {
-            // TODO: make this good
-            socket.emit('streamWarning', '')
         }
     });
 

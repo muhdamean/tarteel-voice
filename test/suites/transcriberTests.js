@@ -453,7 +453,6 @@ export default function suite(mochaContext) {
         let onAyahFound = (surahNum, ayahNum, ayahText) => {
             expect(surahNum).to.equal(ayahLabels[ayahFoundIndex].surahNum);
             expect(ayahNum).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
-            // console.log(`found ${ayahFoundIndex}`);
             ayahFoundIndex += 1;
 
             if (ayahFoundIndex == ayahLabels.length) {

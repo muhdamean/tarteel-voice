@@ -2,6 +2,9 @@ import async from 'async';
 import fetch from 'node-fetch';
 import levenshtein from 'levenshtein-edit-distance';
 
+import * as api_constants from '../config/apiConstants';
+import * as transcription_constants from '../config/transcriptionConstants';
+
 export class Transcriber {
     constructor(onAyahFound, onMatchFound) {
         // Current Ayah trackers
@@ -28,21 +31,11 @@ export class Transcriber {
         // Processing queue to avoid race conditions, as we rely on
         // several external resources (iqra api, tarteel quran text api)
         this.processingQueue = async.priorityQueue(this.processTask, 1);
-
-        // Hyper parameters
-        this.SLACK = 10;
-        this.MAX_IQRA_MATCHES = 10;
     }
 
     destructor = () => {
         this.processingQueue.kill();
     }
-    
-    setCurrentAyah = (ayah) => {
-        this.currentAyah = ayah
-    };
-    
-    getCurrentAyah = () => this.currentAyah;
 
     onTranscript = (transcript, isFinal) => {
         this.processingQueue.push({
@@ -61,7 +54,6 @@ export class Transcriber {
     }
 
     processTranscript = (task, done) => {
-        // console.log("[Queue] Processing next transcript");
         // Update partial transcript
         if (task['isFinal']) {
             this.lastFinalizedTranscript = `${this.lastFinalizedTranscript} ${task['transcript']}`;
@@ -70,21 +62,25 @@ export class Transcriber {
             this.partialTranscript = `${this.lastFinalizedTranscript} ${task['transcript']}`;
         }
 
-        // console.log(this.partialTranscript)
-
+        // Check if we know which ayah in the Quran is being recited
         if (this.currentAyah === null) {
             this.findAyah(this.partialTranscript, (matches) => {
                 if (process.env.NODE_ENV === 'development') {
-                    console.log("[Follow along] Current Matches: " + matches);
+                    console.log("[Follow along] Current Matches: " + JSON.stringify(matches));
                 }
+
+                // If (after filtering) we have exactly one matching ayah, we can be sure
+                // about our position
                 if (matches.length == 1) {
                     let surahNum = matches[0]['surahNum'];
                     let ayahNum = matches[0]['ayahNum'];
 
+                    // Get the current and the next ayah text so we can begin matching
                     let ayatList = [
                         {'surahNum': surahNum, 'ayahNum': ayahNum},
                         {'surahNum': surahNum, 'ayahNum': ayahNum+1}
                     ]
+
                     this.getAyat(ayatList, (err, results) => {
                         let ayahText = results[0].ayahText;
                         this.onAyahFound(surahNum, ayahNum, ayahText);
@@ -97,17 +93,17 @@ export class Transcriber {
                         this.findMatch(this.partialTranscript.substring(this.currentPartialAyahIndex), done);
                     });
                 } else {
-                    // We are not sure about ayah, so just quit
+                    // We are not sure about ayah, so do nothing
                     done();
                 }
             })
         } else {
+            // If we know our position in the Quran, we can directly start matching
             this.findMatch(this.partialTranscript.substring(this.currentPartialAyahIndex), done);
         }
     }
 
     getNextAyah = (task, done) => {
-        // console.log("[Queue] Getting next ayah");
         this.getAyah({'surahNum': task.surahNum, 'ayahNum': task.ayahNum}, (err, result) => {
             this.nextAyah = result === null ? null : result.ayahText;
             return done();
@@ -118,16 +114,23 @@ export class Transcriber {
         if (transcript.length === 0) {
             return done();
         }
-        // console.log(`Partial transcript: ${this.partialTranscript}`);
-        // console.log(`Correct ayah: ${this.currentAyah}`);
-        if (transcript.length > 0 && this.nextAyahStart) {
+
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[Follow along] Partial transcript: ${this.partialTranscript}`);
+            console.log(`[Follow along] Correct ayah: ${this.currentAyah}`);
+        }
+
+        // If we reached the end the previous ayah and have some new characters, we can emit
+        // the ayahFound event and get the next ayah text
+        if (this.nextAyahStart) {
             if (process.env.NODE_ENV === 'development') {
                 console.log("[Follow along] Beginning new ayah")
             }
             this.nextAyahStart = false;
             this.currentAyahNum = this.currentAyahNum + 1;
+
             // TODO: raise transcription error if we think we are at the end of a surah
-            // or retry with iqra i.e. when nextAyah == null
+            // TODO: add support for retrying with iqra e.g. when nextAyah == null
             this.currentAyah = this.nextAyah;
             this.nextAyah = null;
 
@@ -139,9 +142,11 @@ export class Transcriber {
 
             this.onAyahFound(this.currentSurahNum, this.currentAyahNum, this.currentAyah)
         }
+
+        // Find best position within current ayah
         let minDist = Number.MAX_VALUE;
         let finalSlack = Number.MAX_VALUE;
-        for (let i=this.SLACK; i >= -this.SLACK; i--) {
+        for (let i=transcription_constants.TRANSCRIPTION_SLACK; i >= -transcription_constants.TRANSCRIPTION_SLACK; i--) {
             let correctPartial = this.currentAyah.substring(0, transcript.length + i);
             let dist = levenshtein(correctPartial, transcript);
 
@@ -179,11 +184,14 @@ export class Transcriber {
     */
     findAyah = (query, callback) => {
         if (process.env.NODE_ENV === 'development') {
-            // console.log(`[---] Iqra query is: ${query}`);
+            console.log(`[Follow Along] Iqra query is: ${query}`);
         }
 
         query = query.trim();
-        fetch('https://api.iqraapp.com/api/v3.0/search', {
+        if (query.length <= transcription_constants.MIN_PARTIAL_LENGTH) {
+            return callback([]);
+        }
+        fetch(api_constants.IQRA_API_URL, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -200,31 +208,36 @@ export class Transcriber {
             let currentMatches = json.result.matches.map((e) => {return {'surahNum': e.surahNum, 'ayahNum': e.ayahNum}});
 
             if (currentMatches.length == 0) {
-                callback(currentMatches);
-            } else if (currentMatches.length > this.MAX_IQRA_MATCHES) {
-                callback([]);
+                return callback(currentMatches);
+            } else if (currentMatches.length > transcription_constants.MAX_IQRA_MATCHES) {
+                return callback([]);
             } else {
                 this.getAyat(currentMatches, (err, matches) => {
-                    let filteredMatches = []
+                    let filteredMatches = [];
+                    let max_edit_distance = Math.floor(transcription_constants.PREFIX_MATCHING_SLACK + transcription_constants.QUERY_PREFIX_FRACTION * query.length);
                     for (let idx = 0; idx < matches.length; idx++) {
-                        if (query.length > 5 && levenshtein(query, matches[idx].ayahText.substring(0, query.length + 5)) <= Math.floor(5 + 0.50 * query.length) && query.length/matches[idx].ayahText.length > 0.05) {
+                        let current_edit_distance = levenshtein(query, matches[idx].ayahText.substring(0, query.length + transcription_constants.PREFIX_MATCHING_SLACK));
+                        if (current_edit_distance <= max_edit_distance && query.length/matches[idx].ayahText.length > transcription_constants.MIN_PARTIAL_LENGTH_FRACTION) {
                             filteredMatches.push(matches[idx]);
                             if (process.env.NODE_ENV === 'development') {
-                                console.log(`[Follow along] matching ${query} with ${matches[idx].ayahText} MATCHED`)
+                                console.log(`[Follow along] matching ${query} with ${matches[idx].ayahText} MATCHED`);
                             }
                         } else {
                             if (process.env.NODE_ENV === 'development') {
-                                console.log(`[Follow along] matching ${query} with ${matches[idx].ayahText} UNMATCHED`)
+                                console.log(`[Follow along] matching ${query} with ${matches[idx].ayahText} UNMATCHED`);
                             }
                         }
                     }
-                    callback(filteredMatches);
+                    return callback(filteredMatches);
                 });
             }
         })
-        .catch(e => {
-            // TODO: Probably should propagate to client
-            // console.log(e);
+        .catch(err => {
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`[Follow Along] Error:`);
+                console.log(err);
+            }
+            return callback([]);
         });
     };
 
@@ -239,8 +252,7 @@ export class Transcriber {
      *  signature: (error, results)
      */
     getAyah = (ayah, callback) => {
-        // TODO: url should be constant
-        fetch(`https://api-dev.tarteel.io/v1/quran/ayah/?surah=${ayah.surahNum}&ayah=${ayah.ayahNum}`, {
+        fetch(`${api_constants.TARTEEL_API}/?surah=${ayah.surahNum}&ayah=${ayah.ayahNum}`, {
             method: 'GET'
         })
         .then(res => res.json())
@@ -260,9 +272,11 @@ export class Transcriber {
             }
         })
         .catch(err => {
-            // TODO: Probably should propagate to client
-            // console.log("ayah fetch error")
-            // console.log(err)
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`[Follow Along] Ayah fetch error:`);
+                console.log(ayah);
+                console.log(err);
+            }
             return callback(err);
         })
     }
@@ -275,8 +289,7 @@ export class Transcriber {
             if (ayah === null) {
                 return done(null, null);
             }
-            // TODO: url should be constant
-            fetch(`https://api-dev.tarteel.io/v1/quran/ayah/?surah=${ayah.surahNum}&ayah=${ayah.ayahNum}`, {
+            fetch(`${api_constants.TARTEEL_API}/?surah=${ayah.surahNum}&ayah=${ayah.ayahNum}`, {
                 method: 'GET'
             })
             .then(res => res.json())
@@ -296,13 +309,18 @@ export class Transcriber {
                 }
             })
             .catch(err => {
-                // TODO: Probably should propagate to client
-                console.log("ayah fetch error")
-                console.log(err)
+                if (process.env.NODE_ENV === 'development') {
+                    console.log(`[Follow Along] Ayah fetch error:`);
+                    console.log(ayah);
+                    console.log(err);
+                }
                 return done(err);
             })
         }, (err, results) => {
-            // TODO: error check
+            if (process.env.NODE_ENV === 'development' && err) {
+                console.log(`[Follow Along] Ayat fetch error:`);
+                console.log(err);
+            }
             callback(err, results);
         })
     }
