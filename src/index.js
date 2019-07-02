@@ -19,8 +19,9 @@ app.get('/', (req, res) => {
 const server = http.Server(app);
 const io = SocketIo(server);
 
+
 io.on('connection', (socket) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.DEBUG === 'development') {
         console.log(`[${socket.id}] Connected`);
     }
 
@@ -32,7 +33,7 @@ io.on('connection', (socket) => {
      * startStream event starts and initializes the recogntion, file saving and transcription modules
      */
     socket.on('startStream', () => {
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.DEBUG === 'development') {
             console.log(`[${socket.id}] Initializing stream`);
         }
 
@@ -40,7 +41,7 @@ io.on('connection', (socket) => {
         socket.recognitionClient = new RecognitionClient(
             socket.onPartialResults,
             socket.onFinalResults,
-            (err) => console.log(err)
+            socket.onGCPError
         );
         socket.recognitionClient.startStream();
 
@@ -61,7 +62,7 @@ io.on('connection', (socket) => {
      * endStream event shuts all existing modules down
      */
     socket.on('endStream', () => {
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.DEBUG === 'development') {
             console.log(`[${socket.id}] Ending stream`);
         }
 
@@ -102,7 +103,7 @@ io.on('connection', (socket) => {
      * only for `transcribe` mode and not `recognition` mode.
      */
     socket.onPartialResults = (transcript) => {
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.DEBUG === 'development') {
             console.log(`[${socket.id}] Partial result: ${transcript}`);
         }
 
@@ -123,7 +124,7 @@ io.on('connection', (socket) => {
      * current ayah has ended, and signal the client with `nextAyah`.
      */
     socket.onFinalResults = (transcript) => {
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.DEBUG === 'development') {
             console.log(`[${socket.id}] Final result: ${transcript}`);
         }
 
@@ -141,8 +142,23 @@ io.on('connection', (socket) => {
      * and ends the connection.
      */
     socket.onError = (errorMsg) => {
+        if (process.env.DEBUG) {
+            console.log(`Error: ${errorMsg}`);
+        }
         socket.emit('streamError', errorMsg);
         socket.emit('endStream');
+    };
+
+    socket.onGCPError = (gcpError) => {
+      if (process.env.DEBUG) {
+          console.log(`ERROR: GCP. code: ${gcpError.code}, message: ${gcpError.message}`);
+      }
+      if (error.code === 11) {
+          // TODO: Resart audio stream
+          console.log("Restarting GCP Audio Stream.");
+          // socket.recognitionClient.endStream();
+          // socket.recognitionClient.startStream();
+      }
     };
 
     socket.onAyahFound = (surahNum, ayahNum, ayahText) => {
@@ -151,7 +167,7 @@ io.on('connection', (socket) => {
             'ayahNum': ayahNum,
             'ayahWords': ayahText.trim().split(' ')
         });
-    }
+    };
 
     socket.onMatchFound = (surahNum, ayahNum, ayahWordIndex) => {
         socket.emit('matchFound', {
@@ -164,4 +180,5 @@ io.on('connection', (socket) => {
 
 server.listen(5000, () => {
     console.log('Server is Listening on PORT: 5000 ...');
+    console.log(`Debug: ${process.env.DEBUG}`);
 });

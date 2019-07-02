@@ -35,7 +35,7 @@ export class Transcriber {
 
     destructor = () => {
         this.processingQueue.kill();
-    }
+    };
 
     onTranscript = (transcript, isFinal) => {
         this.processingQueue.push({
@@ -43,7 +43,7 @@ export class Transcriber {
             'transcript': transcript,
             'isFinal': isFinal
         }, 2);
-    }
+    };
 
     processTask = (task, done) => {
         if (task['type'] === 'process-transcript') {
@@ -51,7 +51,7 @@ export class Transcriber {
         } else if (task['type'] === 'get-ayah') {
             this.getNextAyah(task, done);
         }
-    }
+    };
 
     processTranscript = (task, done) => {
         // Update partial transcript
@@ -65,13 +65,13 @@ export class Transcriber {
         // Check if we know which ayah in the Quran is being recited
         if (this.currentAyah === null) {
             this.findAyah(this.partialTranscript, (matches) => {
-                if (process.env.NODE_ENV === 'development') {
+                if (process.env.DEBUG === 'development') {
                     console.log("[Follow along] Current Matches: " + JSON.stringify(matches));
                 }
 
                 // If (after filtering) we have exactly one matching ayah, we can be sure
                 // about our position
-                if (matches.length == 1) {
+                if (matches.length === 1) {
                     let surahNum = matches[0]['surahNum'];
                     let ayahNum = matches[0]['ayahNum'];
 
@@ -79,7 +79,7 @@ export class Transcriber {
                     let ayatList = [
                         {'surahNum': surahNum, 'ayahNum': ayahNum},
                         {'surahNum': surahNum, 'ayahNum': ayahNum+1}
-                    ]
+                    ];
 
                     this.getAyat(ayatList, (err, results) => {
                         let ayahText = results[0].ayahText;
@@ -101,21 +101,21 @@ export class Transcriber {
             // If we know our position in the Quran, we can directly start matching
             this.findMatch(this.partialTranscript.substring(this.currentPartialAyahIndex), done);
         }
-    }
+    };
 
     getNextAyah = (task, done) => {
         this.getAyah({'surahNum': task.surahNum, 'ayahNum': task.ayahNum}, (err, result) => {
             this.nextAyah = result === null ? null : result.ayahText;
             return done();
         });
-    }
+    };
     
     findMatch = (transcript, done) => {
         if (transcript.length === 0) {
             return done();
         }
 
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.DEBUG === 'development') {
             console.log(`[Follow along] Partial transcript: ${this.partialTranscript}`);
             console.log(`[Follow along] Correct ayah: ${this.currentAyah}`);
         }
@@ -123,7 +123,7 @@ export class Transcriber {
         // If we reached the end the previous ayah and have some new characters, we can emit
         // the ayahFound event and get the next ayah text
         if (this.nextAyahStart) {
-            if (process.env.NODE_ENV === 'development') {
+            if (process.env.DEBUG === 'development') {
                 console.log("[Follow along] Beginning new ayah")
             }
             this.nextAyahStart = false;
@@ -157,9 +157,9 @@ export class Transcriber {
         }
         // console.log(`Detected follow along: ${this.currentAyah.substring(0, transcript.length + finalSlack)}`);
         let matchedWords = this.currentAyah.substring(0, transcript.length + finalSlack).split(' ');
-        if ((transcript.length + finalSlack) == this.currentAyah.length) {
+        if ((transcript.length + finalSlack) === this.currentAyah.length) {
             // End of ayah - start looking for next ayah
-            if (process.env.NODE_ENV === 'development') {
+            if (process.env.DEBUG === 'development') {
                 console.log("[Follow along] Detected end of ayah")
             }
             this.onMatchFound(this.currentSurahNum, this.currentAyahNum, matchedWords.length);
@@ -183,7 +183,7 @@ export class Transcriber {
     * In the future, this should be factored out into its own module
     */
     findAyah = (query, callback) => {
-        if (process.env.NODE_ENV === 'development') {
+        if (process.env.DEBUG === 'development') {
             console.log(`[Follow Along] Iqra query is: ${query}`);
         }
 
@@ -207,7 +207,7 @@ export class Transcriber {
         .then(json => {
             let currentMatches = json.result.matches.map((e) => {return {'surahNum': e.surahNum, 'ayahNum': e.ayahNum}});
 
-            if (currentMatches.length == 0) {
+            if (currentMatches.length === 0) {
                 return callback(currentMatches);
             } else if (currentMatches.length > transcription_constants.MAX_IQRA_MATCHES) {
                 return callback([]);
@@ -219,11 +219,11 @@ export class Transcriber {
                         let current_edit_distance = levenshtein(query, matches[idx].ayahText.substring(0, query.length + transcription_constants.PREFIX_MATCHING_SLACK));
                         if (current_edit_distance <= max_edit_distance && query.length/matches[idx].ayahText.length > transcription_constants.MIN_PARTIAL_LENGTH_FRACTION) {
                             filteredMatches.push(matches[idx]);
-                            if (process.env.NODE_ENV === 'development') {
+                            if (process.env.DEBUG === 'development') {
                                 console.log(`[Follow along] matching ${query} with ${matches[idx].ayahText} MATCHED`);
                             }
                         } else {
-                            if (process.env.NODE_ENV === 'development') {
+                            if (process.env.DEBUG === 'development') {
                                 console.log(`[Follow along] matching ${query} with ${matches[idx].ayahText} UNMATCHED`);
                             }
                         }
@@ -233,7 +233,7 @@ export class Transcriber {
             }
         })
         .catch(err => {
-            if (process.env.NODE_ENV === 'development') {
+            if (process.env.DEBUG === 'development') {
                 console.log(`[Follow Along] Error:`);
                 console.log(err);
             }
@@ -272,14 +272,14 @@ export class Transcriber {
             }
         })
         .catch(err => {
-            if (process.env.NODE_ENV === 'development') {
+            if (process.env.DEBUG === 'development') {
                 console.log(`[Follow Along] Ayah fetch error:`);
                 console.log(ayah);
                 console.log(err);
             }
             return callback(err);
         })
-    }
+    };
 
     /**
      * Quran text retrieval function for multiple ayat
@@ -309,7 +309,7 @@ export class Transcriber {
                 }
             })
             .catch(err => {
-                if (process.env.NODE_ENV === 'development') {
+                if (process.env.DEBUG === 'development') {
                     console.log(`[Follow Along] Ayah fetch error:`);
                     console.log(ayah);
                     console.log(err);
@@ -317,7 +317,7 @@ export class Transcriber {
                 return done(err);
             })
         }, (err, results) => {
-            if (process.env.NODE_ENV === 'development' && err) {
+            if (process.env.DEBUG === 'development' && err) {
                 console.log(`[Follow Along] Ayat fetch error:`);
                 console.log(err);
             }
