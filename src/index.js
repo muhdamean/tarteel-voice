@@ -161,18 +161,13 @@ io.on('connection', (socket) => {
       }
     };
 
-    socket.onAyahFound = (surahNum, ayahNum, ayahText) => {
-        socket.emit('ayahFound', {
-            'surahNum': surahNum,
-            'ayahNum': ayahNum,
-            'ayahWords': ayahText.trim().split(' ')
-        });
+    socket.onAyahFound = (ayahShape) => {
+        socket.emit('ayahFound', {ayahShape});
     };
 
-    socket.onMatchFound = (surahNum, ayahNum, ayahWordIndex) => {
+    socket.onMatchFound = (ayahShape, ayahWordIndex) => {
         socket.emit('matchFound', {
-            'surahNum': surahNum,
-            'ayahNum': ayahNum,
+            'match': ayahShape,
             'wordCount': ayahWordIndex
         });
     }
