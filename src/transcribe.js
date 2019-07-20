@@ -72,8 +72,8 @@ export class Transcriber {
                 // If (after filtering) we have exactly one matching ayah, we can be sure
                 // about our position
                 if (matches.length === 1) {
-                    let surahNum = matches[0]['surahNum'];
-                    let ayahNum = matches[0]['ayahNum'];
+                    let surahNum = matches[0]['chapter_id'];
+                    let ayahNum = matches[0]['verse_number'];
 
                     // Get the current and the next ayah text so we can begin matching
                     let ayatList = [
@@ -146,7 +146,7 @@ export class Transcriber {
         let minDist = Number.MAX_VALUE;
         let finalSlack = Number.MAX_VALUE;
         for (let i=transcription_constants.TRANSCRIPTION_SLACK; i >= -transcription_constants.TRANSCRIPTION_SLACK; i--) {
-            let correctPartial = this.currentAyah.substring(0, transcript.length + i);
+            let correctPartial = this.currentAyah.text_simple.substring(0, transcript.length + i);
             let dist = levenshtein(correctPartial, transcript);
 
             if (dist <= minDist) {
@@ -155,8 +155,8 @@ export class Transcriber {
             }
         }
         // console.log(`Detected follow along: ${this.currentAyah.substring(0, transcript.length + finalSlack)}`);
-        let matchedWords = this.currentAyah.substring(0, transcript.length + finalSlack).split(' ');
-        if ((transcript.length + finalSlack) === this.currentAyah.length) {
+        let matchedWords = this.currentAyah.text_simple.substring(0, transcript.length + finalSlack).split(' ');
+        if ((transcript.length + finalSlack) === this.currentAyah.text_simple.length) {
             // End of ayah - start looking for next ayah
             if (process.env.DEBUG === 'development') {
                 console.log("[Follow along] Detected end of ayah")
@@ -168,7 +168,7 @@ export class Transcriber {
             );
             // console.log(this.partialTranscript.length + " " + this.currentPartialAyahIndex);
             this.nextAyahStart = true;
-        } else if (this.currentAyah[transcript.length + finalSlack] === ' ') {
+        } else if (this.currentAyah.text_simple[transcript.length + finalSlack] === ' ') {
             this.onMatchFound(this.currentAyah, matchedWords.length);
         } else {
             this.onMatchFound(this.currentAyah, matchedWords.length - 1);
@@ -215,15 +215,15 @@ export class Transcriber {
                     let filteredMatches = [];
                     let max_edit_distance = Math.floor(transcription_constants.PREFIX_MATCHING_SLACK + transcription_constants.QUERY_PREFIX_FRACTION * query.length);
                     for (let idx = 0; idx < matches.length; idx++) {
-                        let current_edit_distance = levenshtein(query, matches[idx].ayahText.substring(0, query.length + transcription_constants.PREFIX_MATCHING_SLACK));
-                        if (current_edit_distance <= max_edit_distance && query.length/matches[idx].ayahText.length > transcription_constants.MIN_PARTIAL_LENGTH_FRACTION) {
+                        let current_edit_distance = levenshtein(query, matches[idx].text_simple.substring(0, query.length + transcription_constants.PREFIX_MATCHING_SLACK));
+                        if (current_edit_distance <= max_edit_distance && query.length/matches[idx].text_simple.length > transcription_constants.MIN_PARTIAL_LENGTH_FRACTION) {
                             filteredMatches.push(matches[idx]);
                             if (process.env.DEBUG === 'development') {
-                                console.log(`[Follow along] matching ${query} with ${matches[idx].ayahText} MATCHED`);
+                                console.log(`[Follow along] matching ${query} with ${matches[idx].text_simple} MATCHED`);
                             }
                         } else {
                             if (process.env.DEBUG === 'development') {
-                                console.log(`[Follow along] matching ${query} with ${matches[idx].ayahText} UNMATCHED`);
+                                console.log(`[Follow along] matching ${query} with ${matches[idx].text_simple} UNMATCHED`);
                             }
                         }
                     }

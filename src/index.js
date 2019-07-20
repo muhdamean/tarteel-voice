@@ -153,7 +153,7 @@ io.on('connection', (socket) => {
       if (process.env.DEBUG) {
           console.log(`ERROR: GCP. code: ${gcpError.code}, message: ${gcpError.message}`);
       }
-      if (error.code === 11) {
+      if (gcpError.code === 11) {
           // TODO: Resart audio stream
           console.log("Restarting GCP Audio Stream.");
           // socket.recognitionClient.endStream();
