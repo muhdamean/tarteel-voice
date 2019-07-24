@@ -7,6 +7,8 @@ import wav from 'wav';
 // when being streamed in real time
 const numChunksPerSecond = 1;
 
+let timerIDs = [];
+
 // Function to extract a chunk of the correct size from the current audio file
 let readOneChunk = (buffer, startChunk) => {
   let currentByte = startChunk * (44100 * 2 / numChunksPerSecond);
@@ -23,7 +25,8 @@ let streamNextChunk = (audioBuffer, cb, done, currChunk, numChunks) => {
   }
 
   if (currChunk < numChunks - 1) {
-    setTimeout(streamNextChunk, 1000/numChunksPerSecond, audioBuffer, cb, done, currChunk+1, numChunks);
+    let timerID = setTimeout(streamNextChunk, 1000/numChunksPerSecond, audioBuffer, cb, done, currChunk+1, numChunks);
+    timerIDs.push(timerID);
   } else {
     done();
   }
@@ -34,7 +37,8 @@ export const streamAudioInRealtime = (audioBuffer, cb, done) => {
   let duration = audioBuffer.length / (44100 * 2);
   let numChunks = Math.ceil(duration * numChunksPerSecond);
 
-  setTimeout(streamNextChunk, 1000/numChunksPerSecond, audioBuffer, cb, done, 0, numChunks);
+  let timerID = setTimeout(streamNextChunk, 1000/numChunksPerSecond, audioBuffer, cb, done, 0, numChunks);
+  timerIDs.push(timerID);
 }
 
 // Stream multiple audio files in sequence
@@ -89,4 +93,9 @@ export const loadAudioFiles = (audioFilePaths, done) => {
     audioStream.pipe(audioReader);
   },
   () => done(audioData));
+}
+
+export const stopAllStreaming = () => {
+  timerIDs.forEach(clearInterval);
+  timerIDs = [];
 }

@@ -45,7 +45,9 @@ export class RecognitionClient {
     this.recognizeStreams[currentIdx] = this.speechClient
       .streamingRecognize(this.requestParams)
       .on('error', (error) => {
-        console.log(error);
+        if (process.env.DEBUG) {
+          console.log(error);
+        }
         // if (error.code === 11) {
         //   this.onError('Duration exceeded 65 seconds')
         //   return;
@@ -61,7 +63,7 @@ export class RecognitionClient {
       return;
     }
 
-    let currentTranscript = data.results[0].alternatives[0].transcript
+    let currentTranscript = data.results[0].alternatives[0].transcript;
     if (process.env.NODE_ENV === 'development') {
       console.log(`Client #${streamIdx} Transcription [${data.results[0].isFinal?'F':'P'}]: ${currentTranscript}`)
     }
@@ -125,7 +127,12 @@ export class RecognitionClient {
 
     if (this.currentRequestDuration > this.maxDurationPerRequest) {
       // End old stream: Might still receive results after ending
-      this.recognizeStreams[this.currentRecognizeStreamIdx].end();
+      try {
+        this.recognizeStreams[this.currentRecognizeStreamIdx].end()
+      } catch (error) {
+        console.error(error);
+        this.onError(error);
+      }
       this.switchInProgress = true;
 
       // Start new stream
@@ -134,7 +141,7 @@ export class RecognitionClient {
       this.recognizeStreams[currentIdx] = this.speechClient
         .streamingRecognize(this.requestParams)
         .on('error', (error) => {
-          console.log(error);
+          console.error(error);
           // if (error.code === 11) {
           //   this.onError('Duration exceeded 65 seconds')
           //   return;
@@ -208,7 +215,7 @@ export class LegacyRecognitionClient {
     if (this.recognizeStream) {
       this.recognizeStream.end();
     }
-  }
+  };
 
   /**
   * Receives streaming data and writes it to the recognizeStream for transcription
