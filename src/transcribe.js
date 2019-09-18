@@ -7,11 +7,11 @@ import * as transcription_constants from '../config/transcriptionConstants';
 
 export class Transcriber {
     constructor(onAyahFound, onMatchFound) {
-        // Current Ayah trackers
-        this.currentSurahNum = null;
-        this.currentAyahNum = null;
-
-        // Textual representations of ayah
+        // Object representations of ayat containing
+        //  - chapter_id: Juz number
+        //  - verse_number: Ayah number
+        //  - text_simple: Ayah text
+        //  - a bunch of other information required by the frontend
         // We store next ayah for quick switching
         this.currentAyah = null;
         this.nextAyah = null;
@@ -82,12 +82,11 @@ export class Transcriber {
                     ];
 
                     this.getAyat(ayatList, (err, results) => {
-                        this.onAyahFound(results[0]);
+                        let ayahShape = results[0]
+                        this.onAyahFound(ayahShape);
 
-                        this.currentAyah = results[0];
+                        this.currentAyah = ayahShape;
                         this.nextAyah = results === null ? null : results[1];
-                        this.currentSurahNum = surahNum;
-                        this.currentAyahNum = ayahNum;
 
                         this.findMatch(this.partialTranscript.substring(this.currentPartialAyahIndex), done);
                     });
@@ -126,7 +125,6 @@ export class Transcriber {
                 console.log("[Follow along] Beginning new ayah")
             }
             this.nextAyahStart = false;
-            this.currentAyahNum = this.currentAyahNum + 1;
 
             // TODO: raise transcription error if we think we are at the end of a surah
             // TODO: add support for retrying with iqra e.g. when nextAyah == null
@@ -135,8 +133,8 @@ export class Transcriber {
 
             this.processingQueue.push({
                 type: 'get-ayah',
-                surahNum: this.currentSurahNum,
-                ayahNum: this.currentAyahNum + 1,
+                surahNum: this.currentAyah.chapter_id,
+                ayahNum: this.currentAyah.verse_number + 1,
             }, 1);
 
             this.onAyahFound(this.currentAyah)
