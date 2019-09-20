@@ -5,6 +5,19 @@ import levenshtein from 'levenshtein-edit-distance';
 import * as api_constants from '../config/apiConstants';
 import * as transcription_constants from '../config/transcriptionConstants';
 
+/**
+ * Function that checks if the ayah that is passed is a special ayah.
+ * All special ayat (found in config/transcriptionConstants) have their
+ * chapter_id as -1.
+ *
+ * @param {ayahShape} Object containing all of the ayah details
+ *
+ * @returns {bool} true if the ayah is special, false otherwise
+ */
+function isSpecialAyah(ayahShape) {
+    return ayahShape.chapter_id === -1;
+}
+
 export class Transcriber {
     constructor(onAyahFound, onMatchFound) {
         // Object representations of ayat containing
@@ -64,9 +77,15 @@ export class Transcriber {
 
         // Check if we know which ayah in the Quran is being recited
         if (this.currentAyah === null) {
-            this.findAyah(this.partialTranscript, (matches) => {
+            this.findAyah(this.partialTranscript.substring(this.currentPartialAyahIndex), (matches) => {
                 if (process.env.DEBUG === 'development') {
-                    console.log("[Follow along] Current Matches: " + JSON.stringify(matches));
+                    console.log("[Follow along] Current Matches: " + JSON.stringify(
+                        matches.map(ayahShape => { return {
+                            chapter_id: ayahShape.chapter_id,
+                            verse_number: ayahShape.verse_number,
+                            text_simple: ayahShape.text_simple
+                        }}))
+                    );
                 }
 
                 // If (after filtering) we have exactly one matching ayah, we can be sure
@@ -75,21 +94,44 @@ export class Transcriber {
                     let surahNum = matches[0]['chapter_id'];
                     let ayahNum = matches[0]['verse_number'];
 
-                    // Get the current and the next ayah text so we can begin matching
-                    let ayatList = [
-                        {'surahNum': surahNum, 'ayahNum': ayahNum},
-                        {'surahNum': surahNum, 'ayahNum': ayahNum+1}
-                    ];
-
-                    this.getAyat(ayatList, (err, results) => {
-                        let ayahShape = results[0]
-                        this.onAyahFound(ayahShape);
-
-                        this.currentAyah = ayahShape;
-                        this.nextAyah = results === null ? null : results[1];
+                    // Check for special ayat
+                    if (isSpecialAyah(matches[0])) {
+                        // Detected ayah is a special ayah, so just perform follow along until we
+                        // reach the end of it. We do not have a next ayah because we do not know what
+                        // surah we are in.
+                        // Note: No ayahFound event is fired for special ayat
+                        if (process.env.DEBUG === 'development') {
+                            console.log(`[Follow along] Special Ayah Detected: ${matches[0].text_simple}`);
+                        }
+                        this.currentAyah = matches[0];
+                        this.nextAyah = null;
+                        this.currentSurahNum = surahNum;
+                        this.currentAyahNum = ayahNum;
 
                         this.findMatch(this.partialTranscript.substring(this.currentPartialAyahIndex), done);
-                    });
+                    } else {
+                        // Detected ayah is not a special ayah, so fetch current and next
+                        // Ayah objects, and start follow along on current ayah
+                        if (process.env.DEBUG === 'development') {
+                            console.log(`[Follow along] Ayah Detected: Surah #${surahNum} Ayah #${ayahNum}`);
+                        }
+                        let ayatList = [
+                            {'surahNum': surahNum, 'ayahNum': ayahNum},
+                            {'surahNum': surahNum, 'ayahNum': ayahNum+1}
+                        ]
+
+                        this.getAyat(ayatList, (err, results) => {
+                            let ayahShape = results[0];
+                            this.onAyahFound(ayahShape);
+
+                            this.currentAyah = ayahShape;
+                            this.nextAyah = results === null ? null : results[1];
+                            this.currentSurahNum = surahNum;
+                            this.currentAyahNum = ayahNum;
+
+                            this.findMatch(this.partialTranscript.substring(this.currentPartialAyahIndex), done);
+                        });
+                    }
                 } else {
                     // We are not sure about ayah, so do nothing
                     done();
@@ -115,14 +157,14 @@ export class Transcriber {
 
         if (process.env.DEBUG === 'development') {
             console.log(`[Follow along] Partial transcript: ${this.partialTranscript}`);
-            console.log(`[Follow along] Correct ayah: ${this.currentAyah}`);
+            console.log(`[Follow along] Correct ayah: ${this.currentAyah.text_simple}`);
         }
 
         // If we reached the end the previous ayah and have some new characters, we can emit
         // the ayahFound event and get the next ayah text
         if (this.nextAyahStart) {
             if (process.env.DEBUG === 'development') {
-                console.log("[Follow along] Beginning new ayah")
+                console.log(`[Follow along] Beginning new ayah: Surah #${this.nextAyah.chapter_id} Ayah #${this.nextAyah.verse_number}`)
             }
             this.nextAyahStart = false;
 
@@ -159,17 +201,33 @@ export class Transcriber {
             if (process.env.DEBUG === 'development') {
                 console.log("[Follow along] Detected end of ayah")
             }
-            this.onMatchFound(this.currentAyah, matchedWords.length);
+
+            // Send onMatch events for all ayat except special ayat
+            if (!isSpecialAyah(this.currentAyah)) {
+                this.onMatchFound(this.currentAyah, matchedWords.length);
+            }
+
             this.currentPartialAyahIndex = Math.min(
                 this.currentPartialAyahIndex + transcript.length + finalSlack + 1,
                 this.partialTranscript.length
             );
             // console.log(this.partialTranscript.length + " " + this.currentPartialAyahIndex);
-            this.nextAyahStart = true;
+
+            // Signal start of next ayah in the next tick if we are in the middle of a surah
+            // or IQRA search if we do not have a nextAyah
+            if (this.nextAyah === null) {
+                this.currentAyah = null;
+            } else {
+                this.nextAyahStart = true;
+            }
         } else if (this.currentAyah.text_simple[transcript.length + finalSlack] === ' ') {
-            this.onMatchFound(this.currentAyah, matchedWords.length);
+            if (!isSpecialAyah(this.currentAyah)) {
+                this.onMatchFound(this.currentAyah, matchedWords.length);
+            }
         } else {
-            this.onMatchFound(this.currentAyah, matchedWords.length - 1);
+            if (!isSpecialAyah(this.currentAyah)) {
+                this.onMatchFound(this.currentAyah, matchedWords.length - 1);
+            }
         }
 
         return done();
@@ -210,6 +268,13 @@ export class Transcriber {
                 return callback([]);
             } else {
                 this.getAyat(currentMatches, (err, matches) => {
+                    // Preprocess matches to add special ayat
+                    // We also remove Surah #1 Ayah #1 match, because Bismillah is a special ayah aleady
+                    matches = matches.concat(transcription_constants.SPECIAL_AYAT);
+                    matches = matches.filter(ayahShape => !(ayahShape.chapter_id === 1 && ayahShape.verse_number === 1));
+
+                    // Filter matches using approximate prefix-matching
+                    // See https://github.com/Tarteel-io/Tarteel-voice/wiki/Follow-Along-Algorithm
                     let filteredMatches = [];
                     let max_edit_distance = Math.floor(transcription_constants.PREFIX_MATCHING_SLACK + transcription_constants.QUERY_PREFIX_FRACTION * query.length);
                     for (let idx = 0; idx < matches.length; idx++) {
