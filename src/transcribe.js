@@ -8,7 +8,7 @@ import * as transcription_constants from '../config/transcriptionConstants';
 export class Transcriber {
     constructor(onAyahFound, onMatchFound) {
         // Object representations of ayat containing
-        //  - chapter_id: Juz number
+        //  - chapter_id: Surah number
         //  - verse_number: Ayah number
         //  - text_simple: Ayah text
         //  - a bunch of other information required by the frontend
