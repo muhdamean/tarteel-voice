@@ -35,8 +35,8 @@ export default function suite (mochaContext, socketUrl, options) {
         console.log("[Test] Next ayah")
       }
 
-      expect(msg.surahNum).to.equal(ayat[currentAyah].surahNum);
-      expect(msg.ayahNum).to.equal(ayat[currentAyah].ayahNum);
+      expect(msg.ayahShape.chapter_id).to.equal(ayat[currentAyah].surahNum);
+      expect(msg.ayahShape.verse_number).to.equal(ayat[currentAyah].ayahNum);
 
       currentAyah += 1;
       if (currentAyah == ayat.length) {
@@ -66,8 +66,8 @@ export default function suite (mochaContext, socketUrl, options) {
         console.log("[Test] Next ayah")
       }
 
-      expect(msg.surahNum).to.equal(ayat[currentAyah].surahNum);
-      expect(msg.ayahNum).to.equal(ayat[currentAyah].ayahNum);
+      expect(msg.ayahShape.chapter_id).to.equal(ayat[currentAyah].surahNum);
+      expect(msg.ayahShape.verse_number).to.equal(ayat[currentAyah].ayahNum);
 
       currentAyah += 1;
       if (currentAyah == ayat.length) {

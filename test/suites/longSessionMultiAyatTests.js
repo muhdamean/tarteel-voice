@@ -31,10 +31,10 @@ export default function suite (mochaContext, socketUrl, options) {
     ];
 
     client1.on('ayahFound', (msg) => {
-      expect(msg.surahNum).to.equal(ayat[currentAyah].surahNum);
-      expect(msg.ayahNum).to.equal(ayat[currentAyah].ayahNum);
+      expect(msg.ayahShape.chapter_id).to.equal(ayat[currentAyah].surahNum);
+      expect(msg.ayahShape.verse_number).to.equal(ayat[currentAyah].ayahNum);
 
-      numWords = msg.ayahWords.length;
+      numWords = msg.ayahShape.text_simple.split(' ').length;
       currentAyah += 1;
     });
 

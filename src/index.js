@@ -153,7 +153,7 @@ io.on('connection', (socket) => {
       if (process.env.DEBUG) {
           console.log(`ERROR: GCP. code: ${gcpError.code}, message: ${gcpError.message}`);
       }
-      if (error.code === 11) {
+      if (gcpError.code === 11) {
           // TODO: Resart audio stream
           console.log("Restarting GCP Audio Stream.");
           // socket.recognitionClient.endStream();
@@ -161,18 +161,13 @@ io.on('connection', (socket) => {
       }
     };
 
-    socket.onAyahFound = (surahNum, ayahNum, ayahText) => {
-        socket.emit('ayahFound', {
-            'surahNum': surahNum,
-            'ayahNum': ayahNum,
-            'ayahWords': ayahText.trim().split(' ')
-        });
+    socket.onAyahFound = (ayahShape) => {
+        socket.emit('ayahFound', {ayahShape});
     };
 
-    socket.onMatchFound = (surahNum, ayahNum, ayahWordIndex) => {
+    socket.onMatchFound = (ayahShape, ayahWordIndex) => {
         socket.emit('matchFound', {
-            'surahNum': surahNum,
-            'ayahNum': ayahNum,
+            'match': ayahShape,
             'wordCount': ayahWordIndex
         });
     }
