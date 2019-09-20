@@ -26,10 +26,10 @@ export default function suite (mochaContext, socketUrl, options) {
     let numWords;
 
     client1.on('ayahFound', (msg) => {
-      expect(msg.ayahNum).to.equal(282);
-      expect(msg.surahNum).to.equal(2);
+      expect(msg.ayahShape.chapter_id).to.equal(2);
+      expect(msg.ayahShape.verse_number).to.equal(282);
 
-      numWords = msg.ayahWords.length;
+      numWords = msg.ayahShape.text_simple.split(' ').length;
     });
 
     client1.on('matchFound', (msg) => {

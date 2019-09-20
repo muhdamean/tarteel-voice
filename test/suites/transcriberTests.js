@@ -5,16 +5,16 @@ export default function suite(mochaContext) {
     mochaContext.timeout(30000);
 
     it('single ayah recognize test', function (done) {
-        let onAyahFound = (surahNum, ayahNum, ayahText) => {
-            expect(surahNum).to.equal(1);
-            expect(ayahNum).to.equal(1);
+        let onAyahFound = (ayahObj) => {
+            expect(ayahObj.chapter_id).to.equal(1);
+            expect(ayahObj.verse_number).to.equal(1);
 
             transcriber.destructor();
             transcriber = null;
             done();
         }
 
-        let onMatchFound = (surahNum, ayahNum, wordCount) => {
+        let onMatchFound = (ayahObj, wordCount) => {
             // pass
         }
         
@@ -50,9 +50,9 @@ export default function suite(mochaContext) {
             {surahNum: 1, ayahNum: 3}
         ];
 
-        let onAyahFound = (surahNum, ayahNum, ayahText) => {
-            expect(surahNum).to.equal(ayahLabels[ayahFoundIndex].surahNum);
-            expect(ayahNum).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
+        let onAyahFound = (ayahObj) => {
+            expect(ayahObj.chapter_id).to.equal(ayahLabels[ayahFoundIndex].surahNum);
+            expect(ayahObj.verse_number).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
             // console.log(`found ${ayahFoundIndex}`);
             ayahFoundIndex += 1;
 
@@ -63,7 +63,7 @@ export default function suite(mochaContext) {
             }
         }
 
-        let onMatchFound = (surahNum, ayahNum, wordCount) => {
+        let onMatchFound = (ayahObj, wordCount) => {
             // pass
         }
         
@@ -120,9 +120,9 @@ export default function suite(mochaContext) {
             {surahNum: 1, ayahNum: 3}
         ];
 
-        let onAyahFound = (surahNum, ayahNum, ayahText) => {
-            expect(surahNum).to.equal(ayahLabels[ayahFoundIndex].surahNum);
-            expect(ayahNum).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
+        let onAyahFound = (ayahObj) => {
+            expect(ayahObj.chapter_id).to.equal(ayahLabels[ayahFoundIndex].surahNum);
+            expect(ayahObj.verse_number).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
             // console.log(`found ${ayahFoundIndex}`);
             ayahFoundIndex += 1;
 
@@ -133,7 +133,7 @@ export default function suite(mochaContext) {
             }
         }
 
-        let onMatchFound = (surahNum, ayahNum, wordCount) => {
+        let onMatchFound = (ayahObj, wordCount) => {
             // pass
         }
         
@@ -182,13 +182,13 @@ export default function suite(mochaContext) {
 
     it('single ayah follow along test', function (done) {
         let numWords = 0;
-        let onAyahFound = (surahNum, ayahNum, ayahText) => {
-            numWords = ayahText.trim().split(' ').length;
+        let onAyahFound = (ayahObj) => {
+            numWords = ayahObj.text_simple.trim().split(' ').length;
         }
 
-        let onMatchFound = (surahNum, ayahNum, wordCount) => {
-            expect(surahNum).to.equal(1);
-            expect(ayahNum).to.equal(1);
+        let onMatchFound = (ayahObj, wordCount) => {
+            expect(ayahObj.chapter_id).to.equal(1);
+            expect(ayahObj.verse_number).to.equal(1);
             if (wordCount == numWords) {
                 transcriber.destructor();
                 transcriber = null;
@@ -230,19 +230,17 @@ export default function suite(mochaContext) {
         let ayahNumWords = 0;
         let ayahFollowAlongEnded = true;
 
-        let onAyahFound = (surahNum, ayahNum, ayahText) => {
+        let onAyahFound = (ayahObj) => {
             expect(ayahFollowAlongEnded).to.equal(true);
-            expect(surahNum).to.equal(ayahLabels[ayahFoundIndex].surahNum);
-            expect(ayahNum).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
+            expect(ayahObj.chapter_id).to.equal(ayahLabels[ayahFoundIndex].surahNum);
+            expect(ayahObj.verse_number).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
 
-            ayahNumWords = ayahText.trim().split(' ').length;
+            ayahNumWords = ayahObj.text_simple.trim().split(' ').length;
             ayahFollowAlongEnded = false;
-            // console.log(`ayah found ${ayahFoundIndex}`);
             ayahFoundIndex += 1;
         }
 
-        let onMatchFound = (surahNum, ayahNum, wordCount) => {
-            // console.log(`match found ${wordCount}`);
+        let onMatchFound = (ayahObj, wordCount) => {
             if (wordCount == ayahNumWords) {
                 ayahFollowAlongEnded = true;
             }
@@ -309,19 +307,17 @@ export default function suite(mochaContext) {
         let ayahNumWords = 0;
         let ayahFollowAlongEnded = true;
 
-        let onAyahFound = (surahNum, ayahNum, ayahText) => {
+        let onAyahFound = (ayahObj) => {
             expect(ayahFollowAlongEnded).to.equal(true);
-            expect(surahNum).to.equal(ayahLabels[ayahFoundIndex].surahNum);
-            expect(ayahNum).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
+            expect(ayahObj.chapter_id).to.equal(ayahLabels[ayahFoundIndex].surahNum);
+            expect(ayahObj.verse_number).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
 
-            ayahNumWords = ayahText.trim().split(' ').length;
+            ayahNumWords = ayahObj.text_simple.trim().split(' ').length;
             ayahFollowAlongEnded = false;
-            // console.log(`ayah found ${ayahFoundIndex}`);
             ayahFoundIndex += 1;
         }
 
-        let onMatchFound = (surahNum, ayahNum, wordCount) => {
-            // console.log(`match found ${wordCount}`);
+        let onMatchFound = (ayahObj, wordCount) => {
             if (wordCount == ayahNumWords) {
                 ayahFollowAlongEnded = true;
             }
@@ -384,9 +380,9 @@ export default function suite(mochaContext) {
             {surahNum: 1, ayahNum: 3}
         ];
 
-        let onAyahFound = (surahNum, ayahNum, ayahText) => {
-            expect(surahNum).to.equal(ayahLabels[ayahFoundIndex].surahNum);
-            expect(ayahNum).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
+        let onAyahFound = (ayahObj) => {
+            expect(ayahObj.chapter_id).to.equal(ayahLabels[ayahFoundIndex].surahNum);
+            expect(ayahObj.verse_number).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
             // console.log(`found ${ayahFoundIndex}`);
             ayahFoundIndex += 1;
 
@@ -397,7 +393,7 @@ export default function suite(mochaContext) {
             }
         }
 
-        let onMatchFound = (surahNum, ayahNum, wordCount) => {
+        let onMatchFound = (ayahObj, wordCount) => {
             // pass
         }
         
@@ -450,9 +446,9 @@ export default function suite(mochaContext) {
             {surahNum: 1, ayahNum: 3}
         ];
 
-        let onAyahFound = (surahNum, ayahNum, ayahText) => {
-            expect(surahNum).to.equal(ayahLabels[ayahFoundIndex].surahNum);
-            expect(ayahNum).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
+        let onAyahFound = (ayahObj) => {
+            expect(ayahObj.chapter_id).to.equal(ayahLabels[ayahFoundIndex].surahNum);
+            expect(ayahObj.verse_number).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
             ayahFoundIndex += 1;
 
             if (ayahFoundIndex == ayahLabels.length) {
@@ -462,7 +458,7 @@ export default function suite(mochaContext) {
             }
         }
 
-        let onMatchFound = (surahNum, ayahNum, wordCount) => {
+        let onMatchFound = (ayahObj, wordCount) => {
             // pass
         }
         

@@ -21,8 +21,8 @@ export default function suite(mochaContext, socketUrl, options) {
     client1 = io.connect(socketUrl, options);
 
     client1.on('ayahFound', (msg) => {
-      expect(msg.surahNum).to.equal(1);
-      expect(msg.ayahNum).to.equal(1);
+      expect(msg.ayahShape.chapter_id).to.equal(1);
+      expect(msg.ayahShape.verse_number).to.equal(1);
       client1.emit('endStream');
       client1.disconnect();
       done();
@@ -44,7 +44,7 @@ export default function suite(mochaContext, socketUrl, options) {
     let numWords = 0;
 
     client1.on('ayahFound', (msg) => {
-      numWords = msg.ayahWords.length;
+      numWords = msg.ayahShape.text_simple.split(' ').length;
     });
 
     client1.on('matchFound', (msg) => {

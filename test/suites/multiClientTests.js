@@ -59,8 +59,8 @@ export default function suite (mochaContext, socketUrl, options) {
     // Check for correct ayah recognition from both clients
     client1.on('ayahFound', (msg) => {
       // console.log('client1 ' + JSON.stringify(msg));
-      expect(msg.surahNum).to.equal(ayat[0].surahNum);
-      expect(msg.ayahNum).to.equal(ayat[0].ayahNum);
+      expect(msg.ayahShape.chapter_id).to.equal(ayat[0].surahNum);
+      expect(msg.ayahShape.verse_number).to.equal(ayat[0].ayahNum);
       client1.emit('endStream');
       client1.disconnect();
       numReplies++;
@@ -71,8 +71,8 @@ export default function suite (mochaContext, socketUrl, options) {
 
     client2.on('ayahFound', (msg) => {
       // console.log('client2 ' + JSON.stringify(msg));
-      expect(msg.surahNum).to.equal(ayat[1].surahNum);
-      expect(msg.ayahNum).to.equal(ayat[1].ayahNum);
+      expect(msg.ayahShape.chapter_id).to.equal(ayat[1].surahNum);
+      expect(msg.ayahShape.verse_number).to.equal(ayat[1].ayahNum);
       client2.emit('endStream');
       client2.disconnect();
       numReplies++;
@@ -117,8 +117,8 @@ export default function suite (mochaContext, socketUrl, options) {
         console.log("[Test] Client 1 Next ayah")
       }
 
-      expect(msg.surahNum).to.equal(ayat[numRepliesClient1].surahNum);
-      expect(msg.ayahNum).to.equal(ayat[numRepliesClient1].ayahNum);
+      expect(msg.ayahShape.chapter_id).to.equal(ayat[numRepliesClient1].surahNum);
+      expect(msg.ayahShape.verse_number).to.equal(ayat[numRepliesClient1].ayahNum);
 
       numReplies++;
       numRepliesClient1++;
@@ -137,8 +137,8 @@ export default function suite (mochaContext, socketUrl, options) {
         console.log("[Test] Client 2 Next ayah")
       }
 
-      expect(msg.surahNum).to.equal(ayat[1 + numRepliesClient2].surahNum);
-      expect(msg.ayahNum).to.equal(ayat[1 + numRepliesClient2].ayahNum);
+      expect(msg.ayahShape.chapter_id).to.equal(ayat[1 + numRepliesClient2].surahNum);
+      expect(msg.ayahShape.verse_number).to.equal(ayat[1 + numRepliesClient2].ayahNum);
 
       numReplies++;
       numRepliesClient2++;
