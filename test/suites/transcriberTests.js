@@ -533,4 +533,253 @@ export default function suite(mochaContext) {
             )
         }
     });
+
+    it('special ayah recognize test with pauses', function (done) {
+        // Test with A’oodhu Billah, Surah #1, Ayah #2
+
+        let ayahFoundIndex = 0;
+        let ayahLabels = [
+            {surahNum: 1, ayahNum: 2},
+        ];
+
+        let onAyahFound = (ayahObj) => {
+            expect(ayahObj.chapter_id).to.equal(ayahLabels[ayahFoundIndex].surahNum);
+            expect(ayahObj.verse_number).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
+            ayahFoundIndex += 1;
+
+            if (ayahFoundIndex == ayahLabels.length) {
+                transcriber.destructor();
+                transcriber = null;
+                done();
+            }
+        }
+
+        let onMatchFound = (ayahObj, wordCount) => {
+            // pass
+        }
+
+        // Set up transcriber
+        let transcriber = new Transcriber(onAyahFound, onMatchFound)
+
+        // Set up partial transcripts
+        let partialTranscripts = [
+            { 'transcript': 'اعوذ بالله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم', 'isFinal': true },
+            { 'transcript': 'الحمد', 'isFinal': false },
+            { 'transcript': 'الحمد', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله رب العالمين', 'isFinal': false },
+            { 'transcript': 'الحمد لله رب العالمين', 'isFinal': true }
+        ];
+
+        for (let partialIndex in partialTranscripts) {
+            transcriber.onTranscript(
+                partialTranscripts[partialIndex]['transcript'],
+                partialTranscripts[partialIndex]['isFinal']
+            )
+        }
+    });
+
+    it('special ayah recognize test 2 with pauses', function (done) {
+        // Test with Bismillah, Surah #1, Ayah #2
+
+        let ayahFoundIndex = 0;
+        let ayahLabels = [
+            {surahNum: 1, ayahNum: 2}
+        ];
+
+        let onAyahFound = (ayahObj) => {
+            expect(ayahObj.chapter_id).to.equal(ayahLabels[ayahFoundIndex].surahNum);
+            expect(ayahObj.verse_number).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
+            ayahFoundIndex += 1;
+
+            if (ayahFoundIndex == ayahLabels.length) {
+                transcriber.destructor();
+                transcriber = null;
+                done();
+            }
+        }
+
+        let onMatchFound = (ayahObj, wordCount) => {
+            // pass
+        }
+
+        // Set up transcriber
+        let transcriber = new Transcriber(onAyahFound, onMatchFound)
+
+        // Set up partial transcripts
+        let partialTranscripts = [
+            { 'transcript': 'بسم', 'isFinal': false },
+            { 'transcript': 'بسم الله', 'isFinal': false },
+            { 'transcript': 'بسم الله', 'isFinal': false },
+            { 'transcript': 'بسم الله الرحمن', 'isFinal': false },
+            { 'transcript': 'بسم الله الرحمن', 'isFinal': false },
+            { 'transcript': 'بسم الله الرحمن الرحيم', 'isFinal': false },
+            { 'transcript': 'بسم الله الرحمن الرحيم', 'isFinal': false },
+            { 'transcript': 'بسم الله الرحمن الرحيم', 'isFinal': true },
+            { 'transcript': 'الحمد', 'isFinal': false },
+            { 'transcript': 'الحمد', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله رب العالمين', 'isFinal': false },
+            { 'transcript': 'الحمد لله رب العالمين', 'isFinal': true }
+        ];
+
+        for (let partialIndex in partialTranscripts) {
+            transcriber.onTranscript(
+                partialTranscripts[partialIndex]['transcript'],
+                partialTranscripts[partialIndex]['isFinal']
+            )
+        }
+    });
+
+    it('special ayah recognize test 3 with pauses', function (done) {
+        // Test with A’oodhu Billah + Bismillah, Surah #1, Ayah #2
+
+        let ayahFoundIndex = 0;
+        let ayahLabels = [
+            {surahNum: 1, ayahNum: 2}
+        ];
+
+        let onAyahFound = (ayahObj) => {
+            expect(ayahObj.chapter_id).to.equal(ayahLabels[ayahFoundIndex].surahNum);
+            expect(ayahObj.verse_number).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
+            ayahFoundIndex += 1;
+
+            if (ayahFoundIndex == ayahLabels.length) {
+                transcriber.destructor();
+                transcriber = null;
+                done();
+            }
+        }
+
+        let onMatchFound = (ayahObj, wordCount) => {
+            // pass
+        }
+
+        // Set up transcriber
+        let transcriber = new Transcriber(onAyahFound, onMatchFound)
+
+        // Set up partial transcripts
+        let partialTranscripts = [
+            { 'transcript': 'اعوذ بالله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم', 'isFinal': true },
+            { 'transcript': 'بسم', 'isFinal': false },
+            { 'transcript': 'بسم الله', 'isFinal': false },
+            { 'transcript': 'بسم الله', 'isFinal': false },
+            { 'transcript': 'بسم الله الرحمن', 'isFinal': false },
+            { 'transcript': 'بسم الله الرحمن', 'isFinal': false },
+            { 'transcript': 'بسم الله الرحمن الرحيم', 'isFinal': false },
+            { 'transcript': 'بسم الله الرحمن الرحيم', 'isFinal': false },
+            { 'transcript': 'بسم الله الرحمن الرحيم', 'isFinal': true },
+            { 'transcript': 'الحمد', 'isFinal': false },
+            { 'transcript': 'الحمد', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله', 'isFinal': false },
+            { 'transcript': 'الحمد لله رب العالمين', 'isFinal': false },
+            { 'transcript': 'الحمد لله رب العالمين', 'isFinal': true }
+        ];
+
+        for (let partialIndex in partialTranscripts) {
+            transcriber.onTranscript(
+                partialTranscripts[partialIndex]['transcript'],
+                partialTranscripts[partialIndex]['isFinal']
+            )
+        }
+    });
+
+    it('special ayah recognize test without pauses', function (done) {
+        // Test with A’oodhu Billah + Bismillah, Surah #1, Ayah #2-#3
+
+        let ayahFoundIndex = 0;
+        let ayahLabels = [
+            {surahNum: 1, ayahNum: 2},
+            {surahNum: 1, ayahNum: 3}
+        ];
+
+        let onAyahFound = (ayahObj) => {
+            expect(ayahObj.chapter_id).to.equal(ayahLabels[ayahFoundIndex].surahNum);
+            expect(ayahObj.verse_number).to.equal(ayahLabels[ayahFoundIndex].ayahNum);
+            ayahFoundIndex += 1;
+
+            if (ayahFoundIndex == ayahLabels.length) {
+                transcriber.destructor();
+                transcriber = null;
+                done();
+            }
+        }
+
+        let onMatchFound = (ayahObj, wordCount) => {
+            // pass
+        }
+
+        // Set up transcriber
+        let transcriber = new Transcriber(onAyahFound, onMatchFound)
+
+        // Set up partial transcripts
+        let partialTranscripts = [
+            { 'transcript': 'اعوذ بالله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله رب العالمين', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله رب العالمين', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن الرحيم', 'isFinal': false },
+            { 'transcript': 'اعوذ بالله من الشيطان الرجيم بسم الله الرحمن الرحيم الحمد لله رب العالمين الرحمن الرحيم', 'isFinal': true },
+        ];
+
+        for (let partialIndex in partialTranscripts) {
+            transcriber.onTranscript(
+                partialTranscripts[partialIndex]['transcript'],
+                partialTranscripts[partialIndex]['isFinal']
+            )
+        }
+    });
 }
