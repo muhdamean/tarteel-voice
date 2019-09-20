@@ -10,7 +10,7 @@ export default function suite(mochaContext, socketUrl, options) {
   let client1, ayahData;
 
   before('Loading wavs...', function (done) {
-    loadAudioFile('test/audio/001001.wav', (data) => {
+    loadAudioFile('test/audio/001002.wav', (data) => {
       ayahData = data;
       done();
     });
@@ -22,7 +22,7 @@ export default function suite(mochaContext, socketUrl, options) {
 
     client1.on('ayahFound', (msg) => {
       expect(msg.ayahShape.chapter_id).to.equal(1);
-      expect(msg.ayahShape.verse_number).to.equal(1);
+      expect(msg.ayahShape.verse_number).to.equal(2);
       client1.emit('endStream');
       client1.disconnect();
       done();
@@ -44,10 +44,14 @@ export default function suite(mochaContext, socketUrl, options) {
     let numWords = 0;
 
     client1.on('ayahFound', (msg) => {
+      expect(msg.ayahShape.chapter_id).to.equal(1);
+      expect(msg.ayahShape.verse_number).to.equal(2);
       numWords = msg.ayahShape.text_simple.split(' ').length;
     });
 
     client1.on('matchFound', (msg) => {
+      expect(msg.match.chapter_id).to.equal(1);
+      expect(msg.match.verse_number).to.equal(2);
       if (msg.wordCount == numWords) {
         client1.emit('endStream');
         client1.disconnect();

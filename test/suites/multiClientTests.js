@@ -10,13 +10,13 @@ export default function suite (mochaContext, socketUrl, options) {
   let client1, client2,
       ayatData = [null, null, null, null, null],
       ayat = [
-        {surahNum: 1, ayahNum: 1},
         {surahNum: 1, ayahNum: 2},
         {surahNum: 1, ayahNum: 3},
+        {surahNum: 1, ayahNum: 4},
       ];
 
   before('Loading wavs...', function(done) {
-    let ayatList = ['001001.wav', 'silence.wav', '001002.wav', 'silence.wav', '001003.wav'];
+    let ayatList = ['001002.wav', 'silence.wav', '001003.wav', 'silence.wav', '001004.wav'];
     loadAudioFiles(ayatList, (data) => {
       ayatData = data;
       done();

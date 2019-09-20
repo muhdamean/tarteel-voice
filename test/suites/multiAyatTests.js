@@ -9,13 +9,13 @@ export default function suite (mochaContext, socketUrl, options) {
   mochaContext.timeout(50000);
   let ayatData = [null, null, null],
       ayat = [
-        {surahNum: 1, ayahNum: 1},
         {surahNum: 1, ayahNum: 2},
         {surahNum: 1, ayahNum: 3},
+        {surahNum: 1, ayahNum: 4},
       ];
 
   before('Loading wavs...', function(done) {
-    let ayatList = ['001001.wav', 'silence.wav', '001002.wav', 'silence.wav', '001003.wav'];
+    let ayatList = ['001002.wav', 'silence.wav', '001003.wav', 'silence.wav', '001004.wav'];
     loadAudioFiles(ayatList, (data) => {
       ayatData = data;
       done();
@@ -60,17 +60,18 @@ export default function suite (mochaContext, socketUrl, options) {
   it('recognize test without pauses', function (done) {
     let client1 = io.connect(socketUrl, options);
     let currentAyah = 0;
+    let ayatWithoutSilence = [ayat[0], ayat[1]];
 
     client1.on('ayahFound', (msg) => {
       if (process.env.NODE_ENV === 'development') {
         console.log("[Test] Next ayah")
       }
 
-      expect(msg.ayahShape.chapter_id).to.equal(ayat[currentAyah].surahNum);
-      expect(msg.ayahShape.verse_number).to.equal(ayat[currentAyah].ayahNum);
+      expect(msg.ayahShape.chapter_id).to.equal(ayatWithoutSilence[currentAyah].surahNum);
+      expect(msg.ayahShape.verse_number).to.equal(ayatWithoutSilence[currentAyah].ayahNum);
 
       currentAyah += 1;
-      if (currentAyah == ayat.length) {
+      if (currentAyah == ayatWithoutSilence.length) {
         client1.emit('endStream');
         client1.disconnect();
         done();
@@ -78,9 +79,9 @@ export default function suite (mochaContext, socketUrl, options) {
     })
 
     client1.on('connect', function(){
-      client1.emit('startStream', {type: 'transcribe'});
-      let ayatWithoutSilence = [ayatData[0], ayatData[2], ayatData[4]]
-      streamMultipleAudioInRealtime(ayatWithoutSilence, (data) => {
+      client1.emit('startStream');
+      let ayatDataWithoutSilence = [ayatData[0], ayatData[2]]
+      streamMultipleAudioInRealtime(ayatDataWithoutSilence, (data) => {
         client1.emit('sendStream', data);
       }, () => {
         client1.emit('endStream');
