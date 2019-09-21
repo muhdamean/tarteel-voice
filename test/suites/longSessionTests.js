@@ -45,6 +45,7 @@ export default function suite (mochaContext, socketUrl, options) {
       streamAudioInRealtime(ayahData, (data) => {
         client1.emit('sendStream', data);
       }, () => {
+        console.log('[Test] Ending stream');
         client1.emit('endStream');
       })
     });
