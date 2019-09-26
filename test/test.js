@@ -6,6 +6,7 @@ import multiAyatTests from './suites/multiAyatTests';
 import multiClientTests from './suites/multiClientTests';
 import longSessionTests from './suites/longSessionTests';
 import longSessionMultiAyatTests from './suites/longSessionMultiAyatTests';
+import snapshotTests from './suites/snapshotTests';
 
 // Start test server
 let app = require('../src/index');
@@ -28,3 +29,5 @@ describe('Multi Ayat tests', function() { multiAyatTests(this, socketUrl, option
 describe('Multi client test', function() { multiClientTests(this, socketUrl, options);});
 describe('Long Session tests', function() { longSessionTests(this, socketUrl, options);});
 describe('Long Session Multi Ayat tests', function() { longSessionMultiAyatTests(this, socketUrl, options);});
+
+describe('Snapshot tests', function() { snapshotTests(this); });
