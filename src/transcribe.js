@@ -179,17 +179,6 @@ export class Transcriber {
             }
             this.nextAyahStart = false;
 
-            // TODO: raise transcription error if we think we are at the end of a surah
-            // TODO: add support for retrying with iqra e.g. when nextAyah == null
-            this.currentAyah = this.nextAyah;
-            this.nextAyah = null;
-
-            this.processingQueue.push({
-                type: 'get-ayah',
-                surahNum: this.currentAyah.chapter_id,
-                ayahNum: this.currentAyah.verse_number + 1,
-            }, 1);
-
             this.onAyahFound(this.currentAyah)
         }
 
@@ -252,6 +241,18 @@ export class Transcriber {
                 this.currentAyah = null;
             } else {
                 this.nextAyahStart = true;
+                // TODO: raise transcription error if we think we are at the end of a surah
+                // TODO: add support for retrying with iqra e.g. when nextAyah == null
+                this.currentAyah = this.nextAyah;
+                this.nextAyah = null;
+
+                if (this.currentAyah) {
+                    this.processingQueue.push({
+                        type: 'get-ayah',
+                        surahNum: this.currentAyah.chapter_id,
+                        ayahNum: this.currentAyah.verse_number + 1,
+                    }, 1);
+                }
             }
         } else if (this.currentAyah.text_simple[transcript.length + finalSlack] === ' ') {
             if (!isSpecialAyah(this.currentAyah)) {
