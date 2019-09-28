@@ -125,7 +125,7 @@ export class Transcriber {
                             this.onAyahFound(ayahShape);
 
                             this.currentAyah = ayahShape;
-                            this.nextAyah = results === null ? null : results[1];
+                            this.nextAyah = results[1] && results[1].chapter_id ? results[1] : null;
                             this.currentSurahNum = surahNum;
                             this.currentAyahNum = ayahNum;
 
@@ -144,8 +144,12 @@ export class Transcriber {
     };
 
     getNextAyah = (task, done) => {
+        if (process.env.DEBUG === 'development') {
+            console.log(`----------------------------------------------------------`);
+            console.log(`[Next Ayah] Downloading ${task.surahNum}-${task.ayahNum}`)
+        }
         this.getAyah({'surahNum': task.surahNum, 'ayahNum': task.ayahNum}, (err, result) => {
-            this.nextAyah = result === null ? null : result;
+            this.nextAyah = result.chapter_id ? result : null;
             return done();
         });
     };
