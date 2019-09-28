@@ -19,21 +19,31 @@ export default function suite(mochaContext) {
             let ayahFoundIndex = 0;
             let ayahLabels = snapshot["expected_ayat"];
             let partialTranscripts = snapshot["transcripts"];
+            let ayahNumWords = 0;
+            let ayahFollowAlongEnded = true;
+
+            this.timeout(partialTranscripts.length * 1000);
 
             let onAyahFound = (ayahShape) => {
+                expect(ayahFollowAlongEnded).to.equal(true);
                 expect(ayahShape.chapter_id).to.equal(ayahLabels[ayahFoundIndex].chapter_id);
                 expect(ayahShape.verse_number).to.equal(ayahLabels[ayahFoundIndex].verse_number);
+
                 ayahFoundIndex += 1;
-        
-                if (ayahFoundIndex == ayahLabels.length) {
+                ayahNumWords = ayahShape.text_simple.trim().split(' ').length;
+                ayahFollowAlongEnded = false;
+            }
+
+            let onMatchFound = (ayahShape, wordCount) => {
+                if (wordCount == ayahNumWords) {
+                    ayahFollowAlongEnded = true;
+                }
+
+                if (ayahFoundIndex == ayahLabels.length && ayahFollowAlongEnded) {
                     transcriber.destructor();
                     transcriber = null;
                     done();
                 }
-            }
-
-            let onMatchFound = (ayahShape, wordCount) => {
-                // pass
             }
             
             // Set up transcriber
