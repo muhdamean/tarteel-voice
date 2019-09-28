@@ -1,6 +1,7 @@
 import async from 'async';
 import fetch from 'node-fetch';
 import levenshtein from 'levenshtein-edit-distance';
+import fuzzball from 'fuzzball';
 
 import * as api_constants from '../config/apiConstants';
 import * as transcription_constants from '../config/transcriptionConstants';
@@ -201,10 +202,10 @@ export class Transcriber {
         // console.log("[Follow along] ===========================")
         for (let i=transcription_constants.TRANSCRIPTION_SLACK; i >= -transcription_constants.TRANSCRIPTION_SLACK; i--) {
             let correctPartial = gold_transcript.substring(0, transcript.length + i).trim();
-            let dist = levenshtein(correctPartial, transcript);
+            let ratio = fuzzball.ratio(correctPartial, transcript)// + Math.abs(correctPartial.length - transcript.length);
 
-            if (dist <= minDist) {
-                minDist = dist;
+            if (ratio > transcription_constants.MIN_RATIO && ratio > maxRatio) {
+                maxRatio = ratio;
                 finalSlack = i;
             }
             // console.log(`[Follow along] Comparing the following (${ratio} ratio)`);
