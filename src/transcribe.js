@@ -34,6 +34,7 @@ export class Transcriber {
         // of an ayah). Instead, we maintain a continuous partial transcript
         // and remove old ayat as we detect them lexically.
         this.partialTranscript = null;
+        this.partialPrefix = '';
         this.lastFinalizedTranscript = '';
         this.currentPartialAyahIndex = 0;
 
@@ -155,20 +156,25 @@ export class Transcriber {
     };
     
     findMatch = (transcript, done) => {
+        transcript = this.partialPrefix + transcript;
+        transcript = transcript.trim();
         if (transcript.length === 0) {
             return done();
         }
 
         if (process.env.DEBUG === 'development') {
+            console.log(`----------------------------------------------------------`);
             console.log(`[Follow along] Partial transcript: ${this.partialTranscript}`);
+            console.log(`[Follow along] Partial transcript in consideration: ${transcript}`);
             console.log(`[Follow along] Correct ayah: ${this.currentAyah.text_simple}`);
+            console.log(`[Follow along] Gold transcript in consideration: ${this.currentAyah.text_simple} ${this.nextAyah ? this.nextAyah.text_simple : ""}`);
         }
 
         // If we reached the end the previous ayah and have some new characters, we can emit
         // the ayahFound event and get the next ayah text
         if (this.nextAyahStart) {
             if (process.env.DEBUG === 'development') {
-                console.log(`[Follow along] Beginning new ayah: Surah #${this.nextAyah.chapter_id} Ayah #${this.nextAyah.verse_number}`)
+                console.log(`[Follow along] Beginning new ayah: Surah #${this.currentAyah.chapter_id} Ayah #${this.currentAyah.verse_number}`)
             }
             this.nextAyahStart = false;
 
@@ -186,29 +192,51 @@ export class Transcriber {
             this.onAyahFound(this.currentAyah)
         }
 
-        // Find best position within current ayah
-        let minDist = Number.MAX_VALUE;
-        let finalSlack = Number.MAX_VALUE;
+        // Find best position within current ayah and next ayah
+        let gold_transcript = this.currentAyah.text_simple +
+                            (this.nextAyah ? " " + this.nextAyah.text_simple : "");
+
+        let maxRatio = Number.MIN_VALUE;
+        let finalSlack = Number.MIN_VALUE;
+        // console.log("[Follow along] ===========================")
         for (let i=transcription_constants.TRANSCRIPTION_SLACK; i >= -transcription_constants.TRANSCRIPTION_SLACK; i--) {
-            let correctPartial = this.currentAyah.text_simple.substring(0, transcript.length + i);
+            let correctPartial = gold_transcript.substring(0, transcript.length + i).trim();
             let dist = levenshtein(correctPartial, transcript);
 
             if (dist <= minDist) {
                 minDist = dist;
                 finalSlack = i;
             }
+            // console.log(`[Follow along] Comparing the following (${ratio} ratio)`);
+            // console.log(`[Follow along] ${correctPartial}`);
+            // console.log(`[Follow along] ${transcript}`);
         }
-        // console.log(`Detected follow along: ${this.currentAyah.substring(0, transcript.length + finalSlack)}`);
-        let matchedWords = this.currentAyah.text_simple.substring(0, transcript.length + finalSlack).split(' ');
-        if ((transcript.length + finalSlack) === this.currentAyah.text_simple.length) {
+        // console.log("[Follow along] ===========================")
+        if (process.env.DEBUG === 'development') {
+            console.log(`[Follow along] Detected follow along: ${gold_transcript.substring(0, transcript.length + finalSlack)}`);
+        }
+        let matchedWords = gold_transcript.substring(0, transcript.length + finalSlack).trim().split(' ');
+        let currentAyahWords = this.currentAyah.text_simple.trim().split(' ');
+        if ((transcript.length + finalSlack) >= this.currentAyah.text_simple.length) {
             // End of ayah - start looking for next ayah
             if (process.env.DEBUG === 'development') {
-                console.log("[Follow along] Detected end of ayah")
+                console.log("[Follow along] Detected end of ayah");
+                console.log(`[Follow along] ${this.nextAyah?"Next ayah available":"NEXT AYAH NOT AVAILABLE"}`);
             }
 
             // Send onMatch events for all ayat except special ayat
             if (!isSpecialAyah(this.currentAyah)) {
-                this.onMatchFound(this.currentAyah, matchedWords.length);
+                if (process.env.DEBUG === 'development') {
+                    console.log(`[Follow along] Match found: ${currentAyahWords.length}`);
+                }
+                this.onMatchFound(this.currentAyah, currentAyahWords.length);
+            }
+
+            // Any words that we matched from the next ayah should be prefixed to future
+            // partials for proper matching
+            this.partialPrefix = matchedWords.slice(currentAyahWords.length).join(' ');
+            if (process.env.DEBUG === 'development') {
+                console.log(`[Follow along] Next partial prefix: ${this.partialPrefix}`);
             }
 
             this.currentPartialAyahIndex = Math.min(
@@ -226,10 +254,16 @@ export class Transcriber {
             }
         } else if (this.currentAyah.text_simple[transcript.length + finalSlack] === ' ') {
             if (!isSpecialAyah(this.currentAyah)) {
+                if (process.env.DEBUG === 'development') {
+                    console.log(`[Follow along] Match found: ${matchedWords.length}`);
+                }
                 this.onMatchFound(this.currentAyah, matchedWords.length);
             }
         } else {
             if (!isSpecialAyah(this.currentAyah)) {
+                if (process.env.DEBUG === 'development') {
+                    console.log(`[Follow along] Match found: ${matchedWords.length}`);
+                }
                 this.onMatchFound(this.currentAyah, matchedWords.length - 1);
             }
         }
