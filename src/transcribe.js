@@ -295,7 +295,7 @@ export class Transcriber {
             body: JSON.stringify({
                 arabicText: query,
                 translation: 'en-hilali',
-                apikey: process.env.IQRA_API_KEY,
+                limit: transcription_constants.MAX_IQRA_MATCHES + 1
             }),
         })
         .then(res => res.json())
