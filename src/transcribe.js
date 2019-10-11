@@ -45,6 +45,8 @@ export class Transcriber {
         // behavior:
         //     partial: ayah1_word1 ayah1_word2             ayah2_word1 ayah2_word2 ...
         //     gold   : ayah1_word1 ayah1_word2 ayah1_word3 ayah2_word1 ayah2_word2 ...
+        //   where `gold` refers to the ground truth against which we are currently matching
+        //   (text from the Quran)
         // In this case, we would match all the way until `ayah2_word1`, and the
         // currentPartialAyahIndex would point to `ayah2_word2`. We store the already
         // matched part of the next ayah (`ayah2_word1` in this case), so we can
@@ -120,7 +122,7 @@ export class Transcriber {
                         // Detected ayah is a special ayah, so just perform follow along until we
                         // reach the end of it. We do not have a next ayah because we do not know what
                         // surah we are in.
-                        // Note: No ayahFound/matchFound events are fired for special ayat
+                        // Note: No ayahFound/matchFound events are currently fired for special ayat
                         if (process.env.DEBUG === 'development') {
                             console.log(`[Follow along] Special Ayah Detected: ${matches[0].text_simple}`);
                         }
@@ -219,7 +221,7 @@ export class Transcriber {
             let correctPartial = gold_transcript.substring(0, transcript.length + i).trim();
             let ratio = fuzzball.ratio(correctPartial, transcript);
 
-            if (ratio > transcription_constants.MIN_RATIO && ratio > maxRatio) {
+            if (ratio > transcription_constants.MIN_SIMILARITY_RATIO && ratio > maxRatio) {
                 maxRatio = ratio;
                 finalSlack = i;
             }
@@ -362,10 +364,9 @@ export class Transcriber {
             }
         })
         .catch(err => {
-            if (process.env.DEBUG === 'development') {
-                console.log(`[Follow Along] Error:`);
-                console.log(err);
-            }
+            console.log(`[Follow Along] Error:`);
+            console.log(err);
+
             return callback([]);
         });
     };
@@ -387,11 +388,9 @@ export class Transcriber {
         .then(res => res.json())
         .then(json => {return callback(null, json);})
         .catch(err => {
-            if (process.env.DEBUG === 'development') {
-                console.log(`[Follow Along] Ayah fetch error:`);
-                console.log(ayah);
-                console.log(err);
-            }
+            console.log(`[Follow Along] Single ayah fetch exception:`);
+            console.log(ayah);
+            console.log(err);
             return callback(err);
         })
     };
@@ -410,15 +409,13 @@ export class Transcriber {
             .then(res => res.json())
             .then(json => {return done(null, json);})
             .catch(err => {
-                if (process.env.DEBUG === 'development') {
-                    console.log(`[Follow Along] Ayah fetch error:`);
-                    console.log(ayah);
-                    console.log(err);
-                }
+                console.log(`[Follow Along] Multi ayah fetch exception:`);
+                console.log(ayah);
+                console.log(err);
                 return done(err);
             })
         }, (err, results) => {
-            if (process.env.DEBUG === 'development' && err) {
+            if (err) {
                 console.log(`[Follow Along] Ayat fetch error:`);
                 console.log(err);
             }

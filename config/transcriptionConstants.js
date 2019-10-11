@@ -5,7 +5,9 @@ export const PREFIX_MATCHING_SLACK = 5;
 export const QUERY_PREFIX_FRACTION = 0.30;
 export const MIN_PARTIAL_LENGTH_FRACTION = 0.05;
 export const TRANSCRIPTION_SLACK = 10;
-export const MIN_RATIO = 30;
+
+// Minimum similarity ratio between partial and gold before we consider it for follow-along
+export const MIN_SIMILARITY_RATIO = 30;
 
 // List of special ayat
 // These ayat are either ones that don't appear in the quran e.g.  A’oodhu Billah or
