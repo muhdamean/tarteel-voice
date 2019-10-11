@@ -1,3 +1,3 @@
 // Iqra
-export const IQRA_API_URL = 'https://api.iqraapp.com/api/v3.0/search';
+export const IQRA_API_URL = 'https://api-dev.tarteel.io/iqra/search/';
 export const TARTEEL_API = 'https://api-dev.tarteel.io/v1';
