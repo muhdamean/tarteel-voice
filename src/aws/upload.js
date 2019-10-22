@@ -23,6 +23,8 @@ const s3 = new aws.S3({
 });
 
 const sendRecording = (stream, surah, ayah) => {
+  console.log('Sending new recording:');
+  console.log(`Surah: ${surah}, Ayah: ${ayah}`);
   const body = new FormData();
   const hash = getRandomHash();
   body.append('file', stream, surah + '_' + ayah + '_' + hash + '.wav');
@@ -40,6 +42,8 @@ const sendRecording = (stream, surah, ayah) => {
     mode: 'cors',
     body,
     credentials: 'include'
+  }).then((resp) => {
+    console.log(`sendRecording response ${resp.json()}`);
   });
 };
 

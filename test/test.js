@@ -7,6 +7,7 @@ import multiClientTests from './suites/multiClientTests';
 import longSessionTests from './suites/longSessionTests';
 import longSessionMultiAyatTests from './suites/longSessionMultiAyatTests';
 import snapshotTests from './suites/snapshotTests';
+import uploadFileTests from "./suites/uploadFileTests";
 
 // Start test server
 let app = require('../src/index');
@@ -21,7 +22,7 @@ let options = {
 // Run unit tests
 describe('Unit tests', function() {
   describe('Transcriber tests', function() {transcriberTests(this);});
-})
+});
 
 // Run integration test suite
 describe('Basic tests', function() { basicTests(this, socketUrl, options);});
@@ -29,5 +30,5 @@ describe('Multi Ayat tests', function() { multiAyatTests(this, socketUrl, option
 describe('Multi client test', function() { multiClientTests(this, socketUrl, options);});
 describe('Long Session tests', function() { longSessionTests(this, socketUrl, options);});
 describe('Long Session Multi Ayat tests', function() { longSessionMultiAyatTests(this, socketUrl, options);});
-
+describe('Upload file tests', function () { uploadFileTests(this, socketUrl, options) });
 describe('Snapshot tests', function() { snapshotTests(this); });

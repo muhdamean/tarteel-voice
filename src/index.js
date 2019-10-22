@@ -134,10 +134,11 @@ io.on('connection', (socket) => {
         });
 
         socket.transcriber.onTranscript(transcript, true);
-        sendRecording(
+        let result = sendRecording(
           audioBuffer,
           socket.transcriber.currentSurahNum,
           socket.transcriber.currentAyahNum);
+        console.log(`sendRecording result: ${result}`)
     };
 
     /**
