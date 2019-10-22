@@ -43,14 +43,20 @@ io.on('connection', (socket) => {
             socket.onFinalResults,
             socket.onGCPError
         );
+        if (process.env.DEBUG === 'development') {
+            console.log(`[${socket.id}] Starting stream`);
+        }
         socket.recognitionClient.startStream();
 
         // Start file saver
-        socket.fileSaver = new FileSaver();
-        socket.fileSaver.startFileSave();
-        socket.on('upload', socket.fileSaver.uploadData);
+        // socket.fileSaver = new FileSaver();
+        // socket.fileSaver.startFileSave();
+        // socket.on('upload', socket.fileSaver.uploadData);
 
         // Start transcriber
+        if (process.env.DEBUG === 'development') {
+            console.log(`[${socket.id}] Starting transcriber`);
+        }
         socket.transcriber = new Transcriber(
             socket.onAyahFound,
             socket.onMatchFound

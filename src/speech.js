@@ -33,7 +33,7 @@ export class RecognitionClient {
     this.nextStreamResultsQueue = [];
     this.previousPartialTranscript = "";
 
-    this.audioBuffer = [];  // Hold the audio data we want to upload
+    this.audioBuffer = Buffer.alloc(1);  // Hold the audio data we want to upload
   }
 
   startStream = () => {
@@ -114,6 +114,9 @@ export class RecognitionClient {
   * Closes the recognize stream
   */
   endStream = () => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Speech] Closing the recognition stream.`);
+    }
     if (this.recognizeStreams[this.currentRecognizeStreamIdx]) {
       this.recognizeStreams[this.currentRecognizeStreamIdx].end();
     }
@@ -126,7 +129,7 @@ export class RecognitionClient {
   */
   handleReceivedData = (data) => {
     this.currentRequestDuration += data.length / (this.requestParams.config.sampleRateHertz * 2);
-    this.audioBuffer = Buffer.concat(this.audioBuffer, data);
+    this.audioBuffer = Buffer.concat([this.audioBuffer, data]);
 
     if (this.currentRequestDuration > this.maxDurationPerRequest) {
       // End old stream: Might still receive results after ending
