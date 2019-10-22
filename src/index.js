@@ -5,7 +5,7 @@ import express from 'express';
 import { FileSaver } from './fileHandler';
 import { RecognitionClient } from './speech';
 import { Transcriber } from './transcribe';
-
+import { sendRecording } from './aws/upload';
 
 require('dotenv').config();
 
@@ -123,11 +123,10 @@ io.on('connection', (socket) => {
      * `recognition` mode. In `transcribe` mode, we just assume that the
      * current ayah has ended, and signal the client with `nextAyah`.
      */
-    socket.onFinalResults = (transcript) => {
+    socket.onFinalResults = (transcript, audioBuffer) => {
         if (process.env.DEBUG === 'development') {
             console.log(`[${socket.id}] Final result: ${transcript}`);
         }
-
         // Propagate raw transcript to client
         socket.emit('speechResult', {
             'text': transcript,
@@ -135,6 +134,10 @@ io.on('connection', (socket) => {
         });
 
         socket.transcriber.onTranscript(transcript, true);
+        sendRecording(
+          audioBuffer,
+          socket.transcriber.currentSurahNum,
+          socket.transcriber.currentAyahNum);
     };
 
     /**

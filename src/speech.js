@@ -32,6 +32,8 @@ export class RecognitionClient {
     this.switchInProgress = false;
     this.nextStreamResultsQueue = [];
     this.previousPartialTranscript = "";
+
+    this.audioBuffer = [];  // Hold the audio data we want to upload
   }
 
   startStream = () => {
@@ -100,7 +102,7 @@ export class RecognitionClient {
     } else {
       // Normal case
       if (data.results[0].isFinal) {
-        this.onFinalResults(this.previousPartialTranscript + currentTranscript);
+        this.onFinalResults(this.previousPartialTranscript + currentTranscript, this.audioBuffer);
         this.previousPartialTranscript = "";
       } else {
         this.onPartialResults(this.previousPartialTranscript + currentTranscript);
@@ -124,6 +126,7 @@ export class RecognitionClient {
   */
   handleReceivedData = (data) => {
     this.currentRequestDuration += data.length / (this.requestParams.config.sampleRateHertz * 2);
+    this.audioBuffer = Buffer.concat(this.audioBuffer, data);
 
     if (this.currentRequestDuration > this.maxDurationPerRequest) {
       // End old stream: Might still receive results after ending
